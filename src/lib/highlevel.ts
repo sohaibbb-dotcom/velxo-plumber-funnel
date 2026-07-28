@@ -66,7 +66,7 @@ export type HighLevelContactInput = {
 };
 
 type GhlUpsertContactResponse = {
-  contact?: { id?: string };
+  contact?: { id?: string; phone?: string };
   id?: string;
 };
 
@@ -90,6 +90,23 @@ export async function upsertContact(input: HighLevelContactInput): Promise<{ con
   if (!contactId) {
     throw new Error("HighLevel upsertContact response did not include a contact id.");
   }
+
+  // HighLevel's upsert matches by email OR phone. If this email and phone
+  // already belong to two DIFFERENT existing contacts, it keeps whichever
+  // field the location is configured to match on first (this account:
+  // email) and silently drops the other rather than erroring — a phone we
+  // sent can go missing with zero indication anything went wrong. Confirmed
+  // empirically: sending a phone already owned by another contact returns
+  // 201 success with no phone on the response, no error field, nothing.
+  // Surface it loudly instead of letting it disappear silently.
+  if (input.phone && !data.contact?.phone) {
+    console.error(
+      `HighLevel contact ${contactId}: phone ${input.phone} was NOT attached. ` +
+        `This usually means the number is already attached to a different HighLevel contact — ` +
+        `search for it in HighLevel and merge the duplicate manually if needed.`,
+    );
+  }
+
   return { contactId };
 }
 
