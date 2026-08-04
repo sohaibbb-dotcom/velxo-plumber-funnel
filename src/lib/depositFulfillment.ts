@@ -1,7 +1,7 @@
 import "server-only";
 import type Stripe from "stripe";
 import { supabaseServer } from "@/lib/supabase/server";
-import { addTag, upsertContact, upsertOpportunity, DEPOSIT_PAID_TAG } from "@/lib/highlevel";
+import { addTag, upsertContact, moveOpportunityToStage, DEPOSIT_PAID_TAG, DEPOSIT_VALUE_AUD } from "@/lib/highlevel";
 import type { OnboardingSubmissionRow } from "@/lib/onboarding/types";
 
 /**
@@ -89,9 +89,14 @@ export async function processDepositPaid(session: Stripe.Checkout.Session, event
 
   await addTag(contactId, DEPOSIT_PAID_TAG);
 
-  const { opportunityId } = await upsertOpportunity({
+  // Advances the SAME opportunity created at "New Lead" (or "Preview
+  // Viewed") earlier in the funnel — never creates a second one for this
+  // contact, and never regresses if it's somehow already further along.
+  const { opportunityId } = await moveOpportunityToStage({
     contactId,
+    targetStageName: "Deposit Paid",
     name: `${submission.business_name} — Deposit Paid`,
+    monetaryValue: DEPOSIT_VALUE_AUD,
   });
 
   const { error: updateError } = await supabaseServer

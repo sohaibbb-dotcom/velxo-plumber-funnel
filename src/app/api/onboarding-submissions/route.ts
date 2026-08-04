@@ -1,6 +1,8 @@
 import "server-only";
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { supabaseServer } from "@/lib/supabase/server";
+import { pushNewLeadToHighLevel } from "@/lib/leadFulfillment";
+import type { OnboardingSubmissionRow } from "@/lib/onboarding/types";
 
 /**
  * onboarding.html is a static site with no backend of its own (hosted as
@@ -159,7 +161,7 @@ export async function POST(request: Request) {
       google_link: googleLink,
       notes,
     })
-    .select("public_id")
+    .select("*")
     .single();
 
   if (insertError || !inserted) {
@@ -169,6 +171,12 @@ export async function POST(request: Request) {
       { status: 500, headers },
     );
   }
+
+  // Pushed to HighLevel after the response is sent — a slow or down GHL
+  // must never delay or fail the customer-facing submission, which has
+  // already succeeded in Supabase at this point.
+  const submission = inserted as OnboardingSubmissionRow;
+  after(() => pushNewLeadToHighLevel(submission));
 
   return NextResponse.json({ success: true, referenceId: inserted.public_id }, { headers });
 }

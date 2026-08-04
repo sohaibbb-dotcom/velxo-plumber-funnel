@@ -26,7 +26,6 @@ const GHL_LOCATION_ID = process.env.HIGHLEVEL_LOCATION_ID;
 
 /** Business configuration, not secrets — deliberately not env vars. */
 const PIPELINE_NAME = "Velxo Clients";
-const STAGE_NAME = "Deposit Paid";
 export const DEPOSIT_PAID_TAG = "deposit paid";
 export const DEPOSIT_VALUE_AUD = 500;
 
@@ -124,20 +123,29 @@ export async function addTag(contactId: string, tag: string): Promise<void> {
   });
 }
 
-type GhlPipelineStage = { id: string; name: string };
+type GhlPipelineStage = { id: string; name: string; position?: number };
 type GhlPipeline = { id: string; name: string; stages?: GhlPipelineStage[] };
 type GhlPipelinesResponse = { pipelines?: GhlPipeline[] };
 
-let cachedPipelineStage: { pipelineId: string; stageId: string } | null = null;
+/**
+ * The three sales-pipeline stages this app drives an opportunity through,
+ * in funnel order. HighLevel's own `position` field on each stage (fetched
+ * live, not hardcoded here) is the source of truth for ordering — this type
+ * just constrains callers to stage names this codebase actually knows how
+ * to target.
+ */
+export type OpportunityStageName = "New Lead" | "Preview Viewed" | "Deposit Paid";
+
+let cachedPipeline: GhlPipeline | null = null;
 
 /**
- * Resolves the "Velxo Clients" pipeline and "Deposit Paid" stage by name
+ * Resolves the "Velxo Clients" pipeline (with its full stage list) by name
  * rather than a hardcoded id, so this doesn't silently break if the
  * pipeline is ever recreated. Cached in-process for the life of the
  * serverless instance — cheap enough to skip a persistent cache.
  */
-export async function resolvePipelineStage(): Promise<{ pipelineId: string; stageId: string }> {
-  if (cachedPipelineStage) return cachedPipelineStage;
+async function getPipeline(): Promise<GhlPipeline> {
+  if (cachedPipeline) return cachedPipeline;
   const { locationId } = requireConfig();
 
   const data = await ghlFetch<GhlPipelinesResponse>(
@@ -151,15 +159,35 @@ export async function resolvePipelineStage(): Promise<{ pipelineId: string; stag
     );
   }
 
-  const stage = (pipeline.stages ?? []).find((s) => s.name === STAGE_NAME);
-  if (!stage) {
-    throw new Error(
-      `HighLevel stage "${STAGE_NAME}" not found in pipeline "${PIPELINE_NAME}".`,
-    );
-  }
+  cachedPipeline = pipeline;
+  return pipeline;
+}
 
-  cachedPipelineStage = { pipelineId: pipeline.id, stageId: stage.id };
-  return cachedPipelineStage;
+function resolveStage(pipeline: GhlPipeline, stageName: OpportunityStageName): GhlPipelineStage {
+  const stage = (pipeline.stages ?? []).find((s) => s.name === stageName);
+  if (!stage) {
+    throw new Error(`HighLevel stage "${stageName}" not found in pipeline "${PIPELINE_NAME}".`);
+  }
+  return stage;
+}
+
+type GhlOpportunitySearchResponse = {
+  opportunities?: { id: string; pipelineStageId: string }[];
+};
+
+/** Finds this contact's existing opportunity in the given pipeline, if any. Confirmed-working endpoint. */
+async function findExistingOpportunity(
+  contactId: string,
+  pipelineId: string,
+): Promise<{ id: string; pipelineStageId: string } | null> {
+  const { locationId } = requireConfig();
+
+  const data = await ghlFetch<GhlOpportunitySearchResponse>(
+    `/opportunities/search?location_id=${encodeURIComponent(locationId)}&contact_id=${encodeURIComponent(contactId)}&pipeline_id=${encodeURIComponent(pipelineId)}`,
+  );
+
+  const opportunity = (data.opportunities ?? [])[0];
+  return opportunity ? { id: opportunity.id, pipelineStageId: opportunity.pipelineStageId } : null;
 }
 
 type GhlUpsertOpportunityResponse = {
@@ -167,32 +195,66 @@ type GhlUpsertOpportunityResponse = {
   id?: string;
 };
 
-export async function upsertOpportunity({
+/**
+ * Creates this contact's "Velxo Clients" opportunity if none exists yet, or
+ * safely advances an existing one — never regresses a stage and never
+ * creates a duplicate. Stage order is taken from HighLevel's own `position`
+ * field on each stage, fetched live.
+ *
+ * The resolved (possibly unchanged) stage is always sent explicitly on the
+ * upsert rather than omitted, so behaviour never depends on undocumented
+ * "omit a field to leave it alone" semantics from HighLevel's API.
+ */
+export async function moveOpportunityToStage({
   contactId,
+  targetStageName,
   name,
+  monetaryValue,
 }: {
   contactId: string;
+  targetStageName: OpportunityStageName;
   name: string;
-}): Promise<{ opportunityId: string }> {
+  monetaryValue?: number;
+}): Promise<{ opportunityId: string; stageName: string; created: boolean }> {
   const { locationId } = requireConfig();
-  const { pipelineId, stageId } = await resolvePipelineStage();
+  const pipeline = await getPipeline();
+  const targetStage = resolveStage(pipeline, targetStageName);
+
+  const existing = await findExistingOpportunity(contactId, pipeline.id);
+
+  let stageIdToSet = targetStage.id;
+  let resolvedStageName: string = targetStageName;
+
+  if (existing) {
+    const currentStage = pipeline.stages?.find((s) => s.id === existing.pipelineStageId);
+    const currentPosition = currentStage?.position ?? -1;
+    const targetPosition = targetStage.position ?? 0;
+
+    if (currentPosition >= targetPosition) {
+      // Already at this stage or further along — never move backwards.
+      stageIdToSet = existing.pipelineStageId;
+      resolvedStageName = currentStage?.name ?? targetStageName;
+    }
+  }
+
+  const body: Record<string, unknown> = {
+    locationId,
+    pipelineId: pipeline.id,
+    pipelineStageId: stageIdToSet,
+    contactId,
+    name,
+    status: "open",
+  };
+  if (monetaryValue !== undefined) body.monetaryValue = monetaryValue;
 
   const data = await ghlFetch<GhlUpsertOpportunityResponse>("/opportunities/upsert", {
     method: "POST",
-    body: JSON.stringify({
-      locationId,
-      pipelineId,
-      pipelineStageId: stageId,
-      contactId,
-      name,
-      status: "open",
-      monetaryValue: DEPOSIT_VALUE_AUD,
-    }),
+    body: JSON.stringify(body),
   });
 
-  const opportunityId = data.opportunity?.id ?? data.id;
+  const opportunityId = data.opportunity?.id ?? data.id ?? existing?.id;
   if (!opportunityId) {
-    throw new Error("HighLevel upsertOpportunity response did not include an opportunity id.");
+    throw new Error("HighLevel moveOpportunityToStage response did not include an opportunity id.");
   }
-  return { opportunityId };
+  return { opportunityId, stageName: resolvedStageName, created: !existing };
 }
