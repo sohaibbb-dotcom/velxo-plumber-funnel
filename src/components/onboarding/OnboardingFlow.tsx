@@ -1,70 +1,36 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
-import { AlertCircle, Check, ChevronLeft, Loader2, Wrench } from "lucide-react";
-import { buttonVariants } from "@/components/ui/Button";
-import { cn } from "@/lib/utils";
+import { Wrench } from "lucide-react";
 import { siteConfig } from "@/config/site";
-import { COLOR_SCHEMES, DEFAULT_COLOR_SCHEME } from "@/lib/colorSchemes";
+import { DEFAULT_COLOR_SCHEME } from "@/lib/colorSchemes";
 import { PLAN_LABELS, type Plan } from "@/lib/plans";
+import { StepShell } from "@/components/onboarding/StepShell";
+import { StepLoading } from "@/components/onboarding/StepLoading";
+import { StepError } from "@/components/onboarding/StepError";
+import { BusinessStep, BUSINESS_STEP_META } from "@/components/onboarding/steps/BusinessStep";
+import { ContactStep, CONTACT_STEP_META } from "@/components/onboarding/steps/ContactStep";
+import { ServicesStep, SERVICES_STEP_META } from "@/components/onboarding/steps/ServicesStep";
+import { BrandStep, BRAND_STEP_META } from "@/components/onboarding/steps/BrandStep";
+import type { OnboardingFormData } from "@/components/onboarding/types";
 
 const EASE = [0.16, 1, 0.3, 1] as const;
 const GENERIC_ERROR = "We couldn't save your details. Please try again.";
-
-const SERVICE_OPTIONS = [
-  "General Plumbing",
-  "Emergency Repairs",
-  "Hot Water Systems",
-  "Drain Cleaning",
-  "Gas Fitting",
-  "Bathroom Renovations",
-];
 
 const FORM_STEPS = ["business", "contact", "services", "brand"] as const;
 type FormStep = (typeof FORM_STEPS)[number];
 type Phase = "form" | "loading" | "error";
 
 const STEP_META: Record<FormStep, { eyebrow: string; title: string; description: string }> = {
-  business: {
-    eyebrow: "Step 1 of 4",
-    title: "Tell us about your business",
-    description: "We'll use this to set up your Velxo account.",
-  },
-  contact: {
-    eyebrow: "Step 2 of 4",
-    title: "Who should we contact?",
-    description: "This is who Velxo will reach out to for setup and support.",
-  },
-  services: {
-    eyebrow: "Step 3 of 4",
-    title: "What do you offer?",
-    description: "Helps us tailor your AI Receptionist's scripts and booking flow.",
-  },
-  brand: {
-    eyebrow: "Step 4 of 4",
-    title: "Brand & final details",
-    description: "Last step — then it's straight to secure payment for your 30-day free trial.",
-  },
+  business: BUSINESS_STEP_META,
+  contact: CONTACT_STEP_META,
+  services: SERVICES_STEP_META,
+  brand: BRAND_STEP_META,
 };
 
-type FormData = {
-  businessName: string;
-  abn: string;
-  businessAddress: string;
-  ownerName: string;
-  businessPhone: string;
-  businessEmail: string;
-  services: string[];
-  suburbsCovered: string;
-  colourScheme: string;
-  googleLink: string;
-  notes: string;
-  referralSource: string;
-};
-
-const emptyForm: FormData = {
+const emptyForm: OnboardingFormData = {
   businessName: "",
   abn: "",
   businessAddress: "",
@@ -82,7 +48,7 @@ const emptyForm: FormData = {
 type SubmitResult = { success: true; checkoutUrl: string } | { success: false; error: string };
 
 async function submitOnboarding(
-  data: FormData,
+  data: OnboardingFormData,
   plan: Plan,
   previewPublicId: string | null,
 ): Promise<SubmitResult> {
@@ -152,12 +118,26 @@ export function OnboardingFlow({
 }) {
   const [formStepIndex, setFormStepIndex] = useState(0);
   const [phase, setPhase] = useState<Phase>("form");
-  const [formData, setFormData] = useState<FormData>(emptyForm);
+  const [formData, setFormData] = useState<OnboardingFormData>(emptyForm);
   const [errorMessage, setErrorMessage] = useState(GENERIC_ERROR);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const currentFormStep = FORM_STEPS[formStepIndex];
   const progress = phase === "form" ? (formStepIndex / FORM_STEPS.length) * 100 : 100;
+
+  const update =
+    (field: keyof OnboardingFormData) =>
+    (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
+      setFormData((prev) => ({ ...prev, [field]: e.target.value }));
+
+  const toggleService = (service: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      services: prev.services.includes(service)
+        ? prev.services.filter((s) => s !== service)
+        : [...prev.services, service],
+    }));
+  };
 
   const goNext = () => {
     if (formStepIndex < FORM_STEPS.length - 1) {
@@ -187,6 +167,8 @@ export function OnboardingFlow({
   const goBack = () => {
     if (formStepIndex > 0) setFormStepIndex((i) => i - 1);
   };
+
+  const meta = STEP_META[currentFormStep];
 
   return (
     <div className="relative flex min-h-screen flex-col bg-white">
@@ -225,16 +207,29 @@ export function OnboardingFlow({
           <div className="rounded-3xl border border-zinc-200 bg-white p-6 shadow-[0_8px_40px_-12px_rgba(0,0,0,0.12)] sm:p-10">
             <AnimatePresence mode="wait">
               {phase === "form" && (
-                <StepContent
+                <StepShell
                   key={currentFormStep}
-                  step={currentFormStep}
-                  formData={formData}
-                  setFormData={setFormData}
-                  onNext={goNext}
+                  eyebrow={meta.eyebrow}
+                  title={meta.title}
+                  description={meta.description}
+                  onSubmit={goNext}
                   onBack={goBack}
                   isFirstStep={formStepIndex === 0}
                   isLastStep={formStepIndex === FORM_STEPS.length - 1}
-                />
+                >
+                  {currentFormStep === "business" && <BusinessStep formData={formData} update={update} />}
+                  {currentFormStep === "contact" && <ContactStep formData={formData} update={update} />}
+                  {currentFormStep === "services" && (
+                    <ServicesStep formData={formData} update={update} toggleService={toggleService} />
+                  )}
+                  {currentFormStep === "brand" && (
+                    <BrandStep
+                      formData={formData}
+                      update={update}
+                      onColourChange={(name) => setFormData((prev) => ({ ...prev, colourScheme: name }))}
+                    />
+                  )}
+                </StepShell>
               )}
               {phase === "loading" && <StepLoading key="loading" />}
               {phase === "error" && (
@@ -245,382 +240,5 @@ export function OnboardingFlow({
         </div>
       </main>
     </div>
-  );
-}
-
-function StepContent({
-  step,
-  formData,
-  setFormData,
-  onNext,
-  onBack,
-  isFirstStep,
-  isLastStep,
-}: {
-  step: FormStep;
-  formData: FormData;
-  setFormData: (data: FormData) => void;
-  onNext: () => void;
-  onBack: () => void;
-  isFirstStep: boolean;
-  isLastStep: boolean;
-}) {
-  const update =
-    (field: keyof FormData) =>
-    (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
-      setFormData({ ...formData, [field]: e.target.value });
-
-  const toggleService = (service: string) => {
-    setFormData({
-      ...formData,
-      services: formData.services.includes(service)
-        ? formData.services.filter((s) => s !== service)
-        : [...formData.services, service],
-    });
-  };
-
-  const handleSubmit = (e: FormEvent) => {
-    e.preventDefault();
-    onNext();
-  };
-
-  const meta = STEP_META[step];
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -12 }}
-      transition={{ duration: 0.4, ease: EASE }}
-    >
-      <p className="text-xs font-semibold tracking-widest text-blue-600 uppercase">{meta.eyebrow}</p>
-      <h1 className="mt-3 text-2xl font-semibold tracking-tight text-balance text-zinc-900 sm:text-3xl">
-        {meta.title}
-      </h1>
-      <p className="mt-3 text-[15px] leading-relaxed text-zinc-500">{meta.description}</p>
-
-      <form onSubmit={handleSubmit} className="mt-8 flex flex-col gap-4">
-        {step === "business" && (
-          <>
-            <FormField
-              label="Business Name"
-              required
-              value={formData.businessName}
-              onChange={update("businessName")}
-              placeholder="Mate's Plumbing & Gas"
-            />
-            <div className="grid gap-4 sm:grid-cols-2">
-              <FormField
-                label="ABN"
-                optional
-                value={formData.abn}
-                onChange={update("abn")}
-                placeholder="12 345 678 901"
-              />
-              <FormField
-                label="Business Address"
-                optional
-                value={formData.businessAddress}
-                onChange={update("businessAddress")}
-                placeholder="1 Example St, Parramatta NSW"
-              />
-            </div>
-          </>
-        )}
-
-        {step === "contact" && (
-          <>
-            <FormField
-              label="Owner / Contact Name"
-              required
-              value={formData.ownerName}
-              onChange={update("ownerName")}
-              placeholder="Alex Mate"
-            />
-            <div className="grid gap-4 sm:grid-cols-2">
-              <FormField
-                label="Business Phone"
-                type="tel"
-                required
-                value={formData.businessPhone}
-                onChange={update("businessPhone")}
-                placeholder="0400 000 000"
-              />
-              <FormField
-                label="Business Email"
-                type="email"
-                required
-                value={formData.businessEmail}
-                onChange={update("businessEmail")}
-                placeholder="you@business.com.au"
-              />
-            </div>
-          </>
-        )}
-
-        {step === "services" && (
-          <>
-            <ServiceCheckboxes selected={formData.services} onToggle={toggleService} />
-            <FormField
-              label="Suburbs Covered"
-              optional
-              value={formData.suburbsCovered}
-              onChange={update("suburbsCovered")}
-              placeholder="Parramatta, Blacktown, Penrith"
-            />
-          </>
-        )}
-
-        {step === "brand" && (
-          <>
-            <BrandColorPicker
-              value={formData.colourScheme}
-              onChange={(name) => setFormData({ ...formData, colourScheme: name })}
-            />
-            <FormField
-              label="Google Business Profile Link"
-              optional
-              value={formData.googleLink}
-              onChange={update("googleLink")}
-              placeholder="https://g.page/..."
-            />
-            <FormTextArea
-              label="Anything else we should know?"
-              optional
-              value={formData.notes}
-              onChange={update("notes")}
-              placeholder="Tell us about your business..."
-            />
-            <FormField
-              label="How did you hear about us?"
-              optional
-              value={formData.referralSource}
-              onChange={update("referralSource")}
-              placeholder="Google, referral, Facebook ad..."
-            />
-          </>
-        )}
-
-        <div className="mt-3 flex items-center gap-3">
-          {!isFirstStep && (
-            <button
-              type="button"
-              onClick={onBack}
-              className={cn(buttonVariants({ variant: "secondary", size: "lg" }))}
-            >
-              <ChevronLeft className="h-4 w-4" />
-              Back
-            </button>
-          )}
-          <button
-            type="submit"
-            className={cn(buttonVariants({ variant: "primary", size: "lg" }), "flex-1")}
-          >
-            {isLastStep ? "Continue to Payment" : "Continue"}
-          </button>
-        </div>
-      </form>
-    </motion.div>
-  );
-}
-
-function FormField({
-  label,
-  optional,
-  ...props
-}: {
-  label: string;
-  optional?: boolean;
-} & React.InputHTMLAttributes<HTMLInputElement>) {
-  return (
-    <label className="flex flex-col gap-1.5 text-left">
-      <span className="text-sm font-medium text-zinc-700">
-        {label}
-        {optional && <span className="ml-1 font-normal text-zinc-400">(optional)</span>}
-      </span>
-      <input
-        {...props}
-        className="h-11 rounded-xl border border-zinc-200 bg-white px-3.5 text-sm text-zinc-900 outline-none transition-colors placeholder:text-zinc-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15"
-      />
-    </label>
-  );
-}
-
-function FormTextArea({
-  label,
-  optional,
-  ...props
-}: {
-  label: string;
-  optional?: boolean;
-} & React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
-  return (
-    <label className="flex flex-col gap-1.5 text-left">
-      <span className="text-sm font-medium text-zinc-700">
-        {label}
-        {optional && <span className="ml-1 font-normal text-zinc-400">(optional)</span>}
-      </span>
-      <textarea
-        {...props}
-        rows={3}
-        className="resize-none rounded-xl border border-zinc-200 bg-white px-3.5 py-2.5 text-sm text-zinc-900 outline-none transition-colors placeholder:text-zinc-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15"
-      />
-    </label>
-  );
-}
-
-function ServiceCheckboxes({
-  selected,
-  onToggle,
-}: {
-  selected: string[];
-  onToggle: (service: string) => void;
-}) {
-  return (
-    <div className="flex flex-col gap-1.5 text-left">
-      <span className="text-sm font-medium text-zinc-700">Services Offered</span>
-      <div className="grid grid-cols-2 gap-2.5">
-        {SERVICE_OPTIONS.map((service) => {
-          const isSelected = selected.includes(service);
-          return (
-            <button
-              key={service}
-              type="button"
-              onClick={() => onToggle(service)}
-              aria-pressed={isSelected}
-              className={cn(
-                "flex items-center gap-2 rounded-xl border px-3 py-2.5 text-left text-sm font-medium transition-colors",
-                isSelected
-                  ? "border-blue-500 bg-blue-50/50 text-zinc-900"
-                  : "border-zinc-200 bg-white text-zinc-600 hover:border-blue-300 hover:bg-blue-50/30",
-              )}
-            >
-              <span
-                className={cn(
-                  "flex h-4 w-4 shrink-0 items-center justify-center rounded border",
-                  isSelected ? "border-blue-600 bg-blue-600 text-white" : "border-zinc-300 bg-white",
-                )}
-              >
-                {isSelected && <Check className="h-3 w-3" strokeWidth={3} />}
-              </span>
-              {service}
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-/**
- * Same six named colour schemes as PreviewRequestFlow's picker (both read
- * from the shared src/lib/colorSchemes.ts so the hex values can't drift) —
- * duplicated here as its own compact UI rather than imported, since it
- * isn't exported as a shared component today.
- */
-function BrandColorPicker({
-  value,
-  onChange,
-}: {
-  value: string;
-  onChange: (name: string) => void;
-}) {
-  return (
-    <div className="flex flex-col gap-1.5 text-left">
-      <span className="text-sm font-medium text-zinc-700">Brand Colours</span>
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-        {COLOR_SCHEMES.map((scheme) => {
-          const selected = scheme.name === value;
-          return (
-            <button
-              key={scheme.name}
-              type="button"
-              onClick={() => onChange(scheme.name)}
-              aria-pressed={selected}
-              className={cn(
-                "flex flex-col items-center gap-2.5 rounded-xl border px-2.5 py-4 text-center transition-colors",
-                selected
-                  ? "border-blue-500 bg-blue-50/50 ring-1 ring-blue-500"
-                  : "border-zinc-200 bg-white hover:border-blue-300 hover:bg-blue-50/30",
-              )}
-            >
-              <span className="relative flex h-11 w-11 shrink-0 overflow-hidden rounded-full border border-zinc-200">
-                <span className="h-full w-1/2" style={{ backgroundColor: scheme.primaryColor }} />
-                <span className="h-full w-1/2" style={{ backgroundColor: scheme.secondaryColor }} />
-                {selected && (
-                  <span className="absolute inset-0 flex items-center justify-center">
-                    <span className="flex h-[18px] w-[18px] items-center justify-center rounded-full bg-blue-600 text-white shadow-sm">
-                      <Check className="h-3 w-3" strokeWidth={3} />
-                    </span>
-                  </span>
-                )}
-              </span>
-              <span
-                className={cn(
-                  "text-[11px] leading-tight font-medium",
-                  selected ? "text-zinc-900" : "text-zinc-600",
-                )}
-              >
-                {scheme.name}
-              </span>
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-function StepLoading() {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -12 }}
-      transition={{ duration: 0.4, ease: EASE }}
-      className="flex flex-col items-center gap-4 py-6 text-center"
-    >
-      <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-      <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 sm:text-3xl">
-        Setting up your account...
-      </h1>
-      <p className="max-w-xs text-sm text-zinc-500">
-        We&apos;re taking you to secure payment to start your 30-day free trial.
-      </p>
-    </motion.div>
-  );
-}
-
-function StepError({ message, onRetry }: { message: string; onRetry: () => void }) {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -12 }}
-      transition={{ duration: 0.4, ease: EASE }}
-      className="py-2 text-center"
-    >
-      <motion.span
-        initial={{ scale: 0 }}
-        animate={{ scale: 1 }}
-        transition={{ type: "spring", stiffness: 260, damping: 16, delay: 0.1 }}
-        className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-red-50 text-red-600"
-      >
-        <AlertCircle className="h-7 w-7" />
-      </motion.span>
-
-      <h1 className="mt-5 text-2xl font-semibold tracking-tight text-balance text-zinc-900 sm:text-3xl">
-        Something went wrong.
-      </h1>
-      <p className="mx-auto mt-3 max-w-sm text-[15px] leading-relaxed text-zinc-500">{message}</p>
-
-      <button
-        type="button"
-        onClick={onRetry}
-        className={cn(buttonVariants({ variant: "primary", size: "lg" }), "mt-8")}
-      >
-        Try Again
-      </button>
-    </motion.div>
   );
 }
