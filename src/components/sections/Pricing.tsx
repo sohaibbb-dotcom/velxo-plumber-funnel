@@ -8,10 +8,10 @@ import { PREVIEW_FORM_PATH, TRIAL_CTA_HREF } from "@/lib/routes";
 const EASE = [0.16, 1, 0.3, 1] as const;
 
 const TRUST_LINE =
-  "30 days free · Then A$297/month · No charge today · Cancel anytime before your trial ends";
+  "30 days free · Then A$297/month · No charge today";
 
 const COMPLETE_TRUST_LINE =
-  "30 days free · Then A$397/month · No charge today · Cancel anytime before your trial ends · No setup fee";
+  "30 days free · Then A$397/month · No setup fee";
 
 const receptionistFeatures = [
   "AI Missed Call Replies",
@@ -64,7 +64,7 @@ export function Pricing() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, amount: 0.15 }}
             transition={{ duration: 0.7, ease: EASE }}
-            className="relative flex h-full flex-col overflow-hidden rounded-3xl border border-white/10 bg-zinc-900 p-6 shadow-2xl shadow-zinc-900/20 sm:p-9"
+            className="relative order-1 flex h-full flex-col overflow-hidden rounded-3xl border border-white/10 bg-zinc-900 p-6 shadow-2xl shadow-zinc-900/20 sm:p-9"
           >
             <div
               aria-hidden
@@ -81,6 +81,9 @@ export function Pricing() {
             <p className="relative mt-2 text-[15px] leading-relaxed text-white/50">
               Instant missed-call replies, AI booking, reviews and CRM — so every
               enquiry gets handled.
+            </p>
+            <p className="relative mt-3 text-sm font-medium text-blue-300">
+              For businesses that already have a website.
             </p>
 
             <div className="relative mt-6 flex flex-wrap items-center gap-2.5">
@@ -104,7 +107,7 @@ export function Pricing() {
                 href={TRIAL_CTA_HREF}
                 className="group inline-flex items-center justify-center gap-2 rounded-full bg-white px-6 py-3.5 text-[15px] font-semibold text-zinc-900 transition-colors duration-200 hover:bg-zinc-100"
               >
-                Start My Free 30-Day Trial
+                Start AI Receptionist Free
                 <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5" />
               </a>
               <p className="text-center text-xs text-white/40">{TRUST_LINE}</p>
@@ -118,7 +121,7 @@ export function Pricing() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, amount: 0.15 }}
             transition={{ duration: 0.7, delay: 0.1, ease: EASE }}
-            className="flex h-full scroll-mt-24 flex-col rounded-3xl border border-zinc-200 bg-white p-6 sm:p-9"
+            className="order-2 flex h-full scroll-mt-24 flex-col rounded-3xl border border-zinc-200 bg-white p-6 sm:p-9"
           >
             <span className="inline-flex w-fit items-center rounded-full bg-zinc-100 px-3 py-1 text-[11px] font-semibold tracking-wide text-zinc-500 uppercase">
               Optional Upgrade
@@ -130,6 +133,9 @@ export function Pricing() {
             <p className="mt-2 text-[15px] leading-relaxed text-zinc-500">
               Everything in AI Receptionist, plus a high-converting website, SEO,
               lead capture and Business Preview.
+            </p>
+            <p className="mt-3 text-sm font-medium text-zinc-700">
+              For businesses that also need a new high-converting website.
             </p>
 
             <div className="mt-6 flex flex-wrap items-center gap-2.5">
@@ -152,7 +158,7 @@ export function Pricing() {
                 href={PREVIEW_FORM_PATH}
                 className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-zinc-200 px-6 py-3.5 text-[15px] font-semibold text-zinc-900 transition-colors duration-200 hover:bg-zinc-50"
               >
-                See My Business Preview
+                See My Complete Business Preview
               </Link>
               <p className="text-center text-xs text-zinc-400">{COMPLETE_TRUST_LINE}</p>
             </div>
