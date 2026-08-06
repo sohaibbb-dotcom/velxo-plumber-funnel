@@ -61,14 +61,14 @@ export function Showcase() {
           className="mx-auto max-w-2xl text-center"
         >
           <p className="text-xs font-semibold tracking-widest text-blue-400 uppercase">
-            Included With Velxo Complete
+            Velxo Complete
           </p>
           <h2 className="mt-3 text-3xl font-semibold tracking-tight text-balance text-white sm:text-4xl md:text-5xl">
-            See the AI website included in Velxo Complete.
+            See what Velxo Complete adds to the AI Receptionist experience.
           </h2>
           <p className="mx-auto mt-4 max-w-md text-base text-white/50 sm:text-lg">
-            A real website we built for a Melbourne plumbing business —
-            included when you choose Velxo Complete.
+            A premium website, SEO and lead-capture experience for plumbers who
+            want everything in one place.
           </p>
         </motion.div>
 

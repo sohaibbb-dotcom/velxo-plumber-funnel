@@ -3,7 +3,6 @@ import { Hero } from "@/components/sections/Hero";
 import { Problem } from "@/components/sections/Problem";
 import { HowItWorks } from "@/components/sections/HowItWorks";
 import { Demo } from "@/components/sections/Demo";
-import { Features } from "@/components/sections/Features";
 import { Comparison } from "@/components/sections/Comparison";
 import { Calculator } from "@/components/sections/Calculator";
 import { WhyVelxo } from "@/components/sections/WhyVelxo";
@@ -19,7 +18,6 @@ export default function Home() {
         <Problem />
         <HowItWorks />
         <Demo />
-        <Features />
         <Comparison />
         <Calculator />
         <WhyVelxo />

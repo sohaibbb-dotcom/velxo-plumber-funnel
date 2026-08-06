@@ -41,7 +41,7 @@ export function Navbar() {
         <div className="hidden md:flex">
           {/* TODO: wire to real trial signup once onboarding/Stripe flow is redesigned */}
           <a href={TRIAL_CTA_HREF} className={buttonVariants({ variant: "primary", size: "md" })}>
-            Start Free Trial
+            Start My Free 30-Day Trial
           </a>
         </div>
 
@@ -85,7 +85,7 @@ export function Navbar() {
                   "mt-2 w-full",
                 )}
               >
-                Start Free Trial
+                Start My Free 30-Day Trial
               </a>
             </div>
           </motion.div>

@@ -11,24 +11,26 @@ const TRUST_LINE =
   "30 days free · Then A$297/month · No charge today · Cancel anytime before your trial ends";
 
 const COMPLETE_TRUST_LINE =
-  "30 days free · Then A$397/month · No charge today · Cancel anytime before your trial ends · Website included · No setup fee";
+  "30 days free · Then A$397/month · No charge today · Cancel anytime before your trial ends · No setup fee";
 
 const receptionistFeatures = [
-  "AI Missed Call Text-Back",
+  "AI Missed Call Replies",
   "AI Booking Assistant",
+  "SMS Conversations",
   "Google Review Requests",
-  "CRM Included",
+  "CRM",
   "Automated Follow-Ups",
   "Sales Pipeline",
+  "AI Automations",
 ];
 
 const completeFeatures = [
   "Everything in AI Receptionist",
-  "High-Converting AI Website",
+  "AI Website",
   "SEO",
-  "Lead Capture Forms",
+  "Lead Capture",
   "Business Preview",
-  "Hosting, Security & Updates",
+  "Conversion Optimisation",
 ];
 
 export function Pricing() {
@@ -49,8 +51,8 @@ export function Pricing() {
             Two ways to work with Velxo.
           </h2>
           <p className="mx-auto mt-4 max-w-md text-base text-zinc-500 sm:text-lg">
-            Start with the AI Receptionist. Add the website whenever
-            you&apos;re ready.
+            Start with Velxo AI Receptionist. Add a website, SEO and lead capture
+            whenever you want the full package.
           </p>
         </motion.div>
 
@@ -77,8 +79,8 @@ export function Pricing() {
               Velxo AI Receptionist
             </h3>
             <p className="relative mt-2 text-[15px] leading-relaxed text-white/50">
-              A complete system for businesses that already have a website
-              and just need more jobs booked.
+              Instant missed-call replies, AI booking, reviews and CRM — so every
+              enquiry gets handled.
             </p>
 
             <div className="relative mt-6 flex flex-wrap items-center gap-2.5">
@@ -119,15 +121,15 @@ export function Pricing() {
             className="flex h-full scroll-mt-24 flex-col rounded-3xl border border-zinc-200 bg-white p-6 sm:p-9"
           >
             <span className="inline-flex w-fit items-center rounded-full bg-zinc-100 px-3 py-1 text-[11px] font-semibold tracking-wide text-zinc-500 uppercase">
-              The Upgrade
+              Optional Upgrade
             </span>
 
             <h3 className="mt-4 text-2xl font-semibold tracking-tight text-zinc-900 sm:text-3xl">
               Velxo Complete
             </h3>
             <p className="mt-2 text-[15px] leading-relaxed text-zinc-500">
-              Everything in AI Receptionist, plus a high-converting AI
-              website.
+              Everything in AI Receptionist, plus a high-converting website, SEO,
+              lead capture and Business Preview.
             </p>
 
             <div className="mt-6 flex flex-wrap items-center gap-2.5">

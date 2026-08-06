@@ -19,6 +19,13 @@ const fadeUp: Variants = {
   }),
 };
 
+const heroHighlights = [
+  "Missed-call replies",
+  "AI booking",
+  "Reviews & follow-ups",
+  "CRM & pipeline",
+];
+
 export function Hero() {
   return (
     <section className="relative overflow-hidden bg-white pt-20 pb-24 sm:pt-28 sm:pb-32">
@@ -63,17 +70,34 @@ export function Hero() {
           animate="visible"
           custom={2}
           variants={fadeUp}
-          className="mx-auto mt-6 max-w-xl text-base leading-relaxed text-zinc-600 sm:text-lg"
+          className="mx-auto mt-6 max-w-2xl text-base leading-relaxed text-zinc-600 sm:text-lg"
         >
-          Velxo&apos;s AI Receptionist answers every missed call, books the job
-          automatically, and keeps your Google reviews coming — so no enquiry
-          goes to the next plumber instead.
+          Velxo AI Receptionist handles instant missed-call replies, books jobs,
+          requests reviews, and keeps your CRM, follow-ups and pipeline moving —
+          so every enquiry gets a response and no lead slips away.
         </motion.p>
 
         <motion.div
           initial="hidden"
           animate="visible"
           custom={3}
+          variants={fadeUp}
+          className="mt-5 flex flex-wrap items-center justify-center gap-2"
+        >
+          {heroHighlights.map((item) => (
+            <span
+              key={item}
+              className="rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-sm font-medium text-zinc-600 shadow-sm"
+            >
+              {item}
+            </span>
+          ))}
+        </motion.div>
+
+        <motion.div
+          initial="hidden"
+          animate="visible"
+          custom={4}
           variants={fadeUp}
           className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row"
         >
@@ -94,7 +118,7 @@ export function Hero() {
         <motion.p
           initial="hidden"
           animate="visible"
-          custom={4}
+          custom={5}
           variants={fadeUp}
           className="mt-4 text-xs font-medium text-zinc-400"
         >
@@ -105,7 +129,7 @@ export function Hero() {
         <motion.a
           initial="hidden"
           animate="visible"
-          custom={5}
+          custom={6}
           variants={fadeUp}
           href="#complete"
           className="mt-6 inline-block text-sm font-medium text-zinc-500 underline decoration-zinc-300 underline-offset-4 transition-colors hover:text-zinc-800"
