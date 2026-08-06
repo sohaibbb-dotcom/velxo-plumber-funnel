@@ -2,6 +2,7 @@ import "server-only";
 import { NextResponse, after } from "next/server";
 import { supabaseServer } from "@/lib/supabase/server";
 import { reuseForOnboarding } from "@/lib/leadFulfillment";
+import { isPlan } from "@/lib/plans";
 import type { OnboardingSubmissionRow } from "@/lib/onboarding/types";
 
 /**
@@ -44,6 +45,7 @@ const MAX_LENGTHS = {
   suburbsCovered: 1000,
   googleLink: 500,
   notes: 2000,
+  referralSource: 200,
 } as const;
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -62,6 +64,13 @@ type RequestBody = {
   googleLink?: unknown;
   notes?: unknown;
   previewPublicId?: unknown;
+  referralSource?: unknown;
+  /**
+   * Which subscription product this submission is for — set by the new
+   * in-app /onboarding wizard. Optional and unvalidated-if-absent for
+   * backward compatibility: legacy onboarding.html doesn't send it yet.
+   */
+  plan?: unknown;
 };
 
 function asString(value: unknown): string {
@@ -127,6 +136,18 @@ export async function POST(request: Request) {
   const colourScheme = stripHtml(asString(body.colourScheme)) || null;
   const googleLink = asString(body.googleLink) || null;
   const notes = stripHtml(asString(body.notes)) || null;
+  const referralSource = stripHtml(asString(body.referralSource)) || null;
+
+  // Optional: absent entirely for legacy onboarding.html submissions. If
+  // present, it must be one of the canonical values — never silently
+  // dropped, since a caller that explicitly sent a plan expects it stored.
+  if (body.plan !== undefined && !isPlan(body.plan)) {
+    return NextResponse.json(
+      { success: false, error: "Invalid plan selected." },
+      { status: 400, headers },
+    );
+  }
+  const plan = isPlan(body.plan) ? body.plan : null;
 
   if (!businessName) {
     return NextResponse.json(
@@ -162,7 +183,8 @@ export async function POST(request: Request) {
     ownerName.length > MAX_LENGTHS.ownerName ||
     (suburbsCovered?.length ?? 0) > MAX_LENGTHS.suburbsCovered ||
     (googleLink?.length ?? 0) > MAX_LENGTHS.googleLink ||
-    (notes?.length ?? 0) > MAX_LENGTHS.notes;
+    (notes?.length ?? 0) > MAX_LENGTHS.notes ||
+    (referralSource?.length ?? 0) > MAX_LENGTHS.referralSource;
 
   if (tooLong) {
     return NextResponse.json(
@@ -187,6 +209,8 @@ export async function POST(request: Request) {
       colour_scheme: colourScheme,
       google_link: googleLink,
       notes,
+      referral_source: referralSource,
+      plan,
       preview_request_id: previewRequestId,
     })
     .select("*")

@@ -595,3 +595,37 @@ as $$
   left join revenue_agg ra on ra.meta_creative_id = fa.meta_creative_id and ra.client_id = fa.client_id
   left join spend_agg sp on sp.meta_creative_id = fa.meta_creative_id and sp.client_id = fa.client_id;
 $$;
+
+-- ============================================================================
+-- Migration: Stripe subscription fields on onboarding_submissions
+--
+-- Phase 1 of the AI Receptionist-first subscription pivot (see CLAUDE.md).
+-- Backend foundation only — nothing writes trial_starts_at/subscription_status
+-- /etc yet (that's Phase 2's webhook). All nullable, added now so Phase 2
+-- doesn't need a second manual SQL Editor pass.
+--
+-- `plan` distinguishes which subscription product a submission is for.
+-- Canonical values only ('ai_receptionist' | 'complete') — see
+-- src/lib/plans.ts, the single source of truth every other file imports
+-- from. Nullable: legacy onboarding.html submissions don't send it yet.
+--
+-- stripe_session_id and stripe_customer_id are NOT added here — they
+-- already exist on this table (added for the deposit flow) and are reused
+-- as-is: a given row is only ever driven by one Stripe flow (legacy
+-- deposit or new subscription), so there's no ambiguity in sharing them.
+--
+-- referral_source is unrelated to Stripe — captured here opportunistically
+-- while this table is already being migrated ("How did you hear about us?").
+--
+-- This file is NOT run automatically — apply manually via the Supabase SQL
+-- editor, same as the rest of this file.
+-- ============================================================================
+alter table public.onboarding_submissions
+  add column if not exists plan text check (plan in ('ai_receptionist', 'complete')),
+  add column if not exists stripe_subscription_id text,
+  add column if not exists stripe_price_id text,
+  add column if not exists subscription_status text,
+  add column if not exists trial_starts_at timestamptz,
+  add column if not exists trial_ends_at timestamptz,
+  add column if not exists payment_method_status text,
+  add column if not exists referral_source text;
