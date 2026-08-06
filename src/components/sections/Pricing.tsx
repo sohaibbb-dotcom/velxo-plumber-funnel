@@ -83,7 +83,7 @@ export function Pricing() {
               enquiry gets handled.
             </p>
             <p className="relative mt-3 text-sm font-medium text-blue-300">
-              For businesses that already have a website.
+              Already have a website?
             </p>
 
             <div className="relative mt-6 flex flex-wrap items-center gap-2.5">
@@ -107,9 +107,12 @@ export function Pricing() {
                 href={TRIAL_CTA_HREF}
                 className="group inline-flex items-center justify-center gap-2 rounded-full bg-white px-6 py-3.5 text-[15px] font-semibold text-zinc-900 transition-colors duration-200 hover:bg-zinc-100"
               >
-                Start AI Receptionist Free
+                Start Free Trial
                 <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5" />
               </a>
+              <p className="mx-auto mt-2 text-sm font-medium text-white/70">
+                AI Receptionist • 30 days free
+              </p>
               <p className="text-center text-xs text-white/40">{TRUST_LINE}</p>
             </div>
           </motion.div>
@@ -135,7 +138,7 @@ export function Pricing() {
               lead capture and Business Preview.
             </p>
             <p className="mt-3 text-sm font-medium text-zinc-700">
-              For businesses that also need a new high-converting website.
+              Need a new website too?
             </p>
 
             <div className="mt-6 flex flex-wrap items-center gap-2.5">
