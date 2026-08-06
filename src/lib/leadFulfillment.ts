@@ -1,72 +1,153 @@
 import "server-only";
 import { supabaseServer } from "@/lib/supabase/server";
-import { upsertContact, moveOpportunityToStage, type OpportunityStageName } from "@/lib/highlevel";
+import { upsertContact, moveOpportunityToStage } from "@/lib/highlevel";
 import type { OnboardingSubmissionRow } from "@/lib/onboarding/types";
+import type { PreviewRequestRow } from "@/lib/preview/types";
 
 /**
- * Progressive GHL pipeline stages driven from lead-capture time onward —
- * distinct from src/lib/depositFulfillment.ts, which owns only the
- * Stripe-triggered "Deposit Paid" transition. Every path here funnels
+ * Progressive GHL pipeline stages, driven from the top of the funnel
+ * onward — distinct from src/lib/depositFulfillment.ts, which owns only
+ * the Stripe-triggered "Deposit Paid" transition. Every path here funnels
  * through the same forward-only moveOpportunityToStage() guard in
  * src/lib/highlevel.ts, so no call order can create a duplicate
  * opportunity or move one backwards.
+ *
+ * The preview_requests row is now the SOURCE OF TRUTH for a contact's
+ * ghl_contact_id/ghl_opportunity_id — it's created and saved here, the
+ * moment the /preview form is submitted, at "New Lead". Everything
+ * downstream (viewing the preview, submitting the onboarding wizard,
+ * paying the deposit) reuses that same contact/opportunity rather than
+ * guessing via cross-table correlation.
  */
 
-function contactInputFrom(
-  submission: Pick<OnboardingSubmissionRow, "business_email" | "business_phone" | "owner_name" | "business_name">,
-) {
-  const nameParts = submission.owner_name.trim().split(/\s+/);
-  return {
-    email: submission.business_email,
-    phone: submission.business_phone,
-    firstName: nameParts[0] ?? submission.owner_name,
-    lastName: nameParts.slice(1).join(" "),
-    businessName: submission.business_name,
-  };
+function splitName(fullName: string): { firstName: string; lastName: string } {
+  const parts = fullName.trim().split(/\s+/);
+  return { firstName: parts[0] ?? fullName, lastName: parts.slice(1).join(" ") };
 }
 
 /**
- * The onboarding wizard is normally reached via a CTA on an already-viewed
- * preview, so by the time a submission lands, the preview has usually
- * already been seen. Correlated by email — preview_requests and
- * onboarding_submissions are separate tables with no shared id today.
+ * Fires once, right after a new preview_requests row is inserted (the
+ * top-of-funnel /preview form). Creates the HighLevel contact and an
+ * opportunity at "New Lead", and saves the resulting ids back onto the
+ * row. Deliberately swallows its own errors: HighLevel being slow or down
+ * must never fail the customer-facing preview submission.
  */
-async function wasPreviewAlreadyViewed(email: string): Promise<boolean> {
-  const { data, error } = await supabaseServer
-    .from("preview_requests")
-    .select("preview_viewed_at")
-    .eq("email", email)
-    .not("preview_viewed_at", "is", null)
-    .limit(1)
-    .maybeSingle();
+export async function pushPreviewLeadToHighLevel(previewRow: PreviewRequestRow): Promise<void> {
+  try {
+    const { firstName, lastName } = splitName(previewRow.contact_name || previewRow.business_name);
 
-  if (error) {
-    console.error("Failed to check preview_requests for a prior view:", error.message);
-    return false;
+    const { contactId } = await upsertContact({
+      email: previewRow.email,
+      phone: previewRow.phone,
+      firstName,
+      lastName,
+      businessName: previewRow.business_name,
+    });
+
+    const { opportunityId } = await moveOpportunityToStage({
+      contactId,
+      targetStageName: "New Lead",
+      name: previewRow.business_name,
+    });
+
+    const { error } = await supabaseServer
+      .from("preview_requests")
+      .update({ ghl_contact_id: contactId, ghl_opportunity_id: opportunityId })
+      .eq("id", previewRow.id);
+
+    if (error) {
+      console.error(
+        `Pushed preview request ${previewRow.id} to HighLevel, but saving ghl ids to Supabase failed:`,
+        error.message,
+      );
+    }
+  } catch (err) {
+    console.error(
+      `Failed to push preview request ${previewRow.id} to HighLevel:`,
+      err instanceof Error ? err.message : err,
+    );
   }
-  return Boolean(data);
+}
+
+/**
+ * Fires on every view of a generated preview (src/app/p/[publicId]/route.ts).
+ * Advances that SAME opportunity to "Preview Viewed" using the ids already
+ * saved on the row. Falls back to a full upsert (as a safety net, in case
+ * the original "New Lead" push failed or this row predates that column
+ * existing) so a view never leaves a lead stranded with no HighLevel
+ * record at all.
+ */
+export async function advancePreviewViewedById(previewRow: PreviewRequestRow): Promise<void> {
+  try {
+    let contactId = previewRow.ghl_contact_id;
+
+    if (!contactId) {
+      const { firstName, lastName } = splitName(previewRow.contact_name || previewRow.business_name);
+      const upserted = await upsertContact({
+        email: previewRow.email,
+        phone: previewRow.phone,
+        firstName,
+        lastName,
+        businessName: previewRow.business_name,
+      });
+      contactId = upserted.contactId;
+    }
+
+    const { opportunityId } = await moveOpportunityToStage({
+      contactId,
+      targetStageName: "Preview Viewed",
+      name: previewRow.business_name,
+    });
+
+    if (contactId !== previewRow.ghl_contact_id || opportunityId !== previewRow.ghl_opportunity_id) {
+      const { error } = await supabaseServer
+        .from("preview_requests")
+        .update({ ghl_contact_id: contactId, ghl_opportunity_id: opportunityId })
+        .eq("id", previewRow.id);
+      if (error) {
+        console.error(
+          `Advanced the opportunity for preview request ${previewRow.id}, but saving ghl ids to Supabase failed:`,
+          error.message,
+        );
+      }
+    }
+  } catch (err) {
+    console.error(
+      `Failed to advance preview-viewed stage for preview request ${previewRow.id}:`,
+      err instanceof Error ? err.message : err,
+    );
+  }
 }
 
 /**
  * Fires once, right after a new onboarding_submissions row is inserted.
- * Creates the HighLevel contact/opportunity at "New Lead" — or straight at
- * "Preview Viewed" if this business already viewed its preview earlier —
- * and saves the resulting ids back onto the row.
- *
- * Deliberately swallows its own errors: HighLevel being slow or down must
- * never fail the customer-facing onboarding submission, which has already
- * succeeded in Supabase by the time this runs.
+ * Reuses the existing HighLevel contact/opportunity for this email (the
+ * one created by the /preview funnel above) rather than creating a new
+ * one: upsertContact is idempotent by email, and moveOpportunityToStage
+ * finds any existing opportunity for that contact — so this can only ever
+ * attach to what's already there. Passing "New Lead" as the target is
+ * deliberate: it's the lowest stage in the funnel, so the forward-only
+ * guard in moveOpportunityToStage means this call can never regress
+ * whatever stage the opportunity is actually at (Preview Viewed or
+ * beyond) — it only creates fresh at "New Lead" for the rare case where
+ * onboarding was reached without ever going through /preview.
  */
-export async function pushNewLeadToHighLevel(submission: OnboardingSubmissionRow): Promise<void> {
+export async function reuseForOnboarding(submission: OnboardingSubmissionRow): Promise<void> {
   try {
-    const alreadyViewed = await wasPreviewAlreadyViewed(submission.business_email);
-    const targetStageName: OpportunityStageName = alreadyViewed ? "Preview Viewed" : "New Lead";
+    const { firstName, lastName } = splitName(submission.owner_name);
 
-    const { contactId } = await upsertContact(contactInputFrom(submission));
+    const { contactId } = await upsertContact({
+      email: submission.business_email,
+      phone: submission.business_phone,
+      firstName,
+      lastName,
+      businessName: submission.business_name,
+    });
+
     const { opportunityId } = await moveOpportunityToStage({
       contactId,
-      targetStageName,
-      name: `${submission.business_name} — ${targetStageName}`,
+      targetStageName: "New Lead",
+      name: submission.business_name,
     });
 
     const { error } = await supabaseServer
@@ -76,61 +157,14 @@ export async function pushNewLeadToHighLevel(submission: OnboardingSubmissionRow
 
     if (error) {
       console.error(
-        `Pushed submission ${submission.id} to HighLevel, but saving ghl ids to Supabase failed:`,
+        `Reused HighLevel contact/opportunity for submission ${submission.id}, but saving ids to Supabase failed:`,
         error.message,
       );
     }
   } catch (err) {
     console.error(
-      `Failed to push onboarding submission ${submission.id} to HighLevel:`,
+      `Failed to reuse HighLevel contact/opportunity for submission ${submission.id}:`,
       err instanceof Error ? err.message : err,
     );
-  }
-}
-
-/**
- * Fires on every view of a generated preview (src/app/p/[publicId]/route.ts).
- * Advances the matching business's opportunity to "Preview Viewed" if one
- * already exists. A no-op when the customer hasn't submitted the onboarding
- * form yet — the common case, since viewing happens before onboarding —
- * because pushNewLeadToHighLevel() checks for a prior view and starts at
- * "Preview Viewed" directly once they do submit.
- */
-export async function advancePreviewViewedByEmail(email: string): Promise<void> {
-  try {
-    const { data: submission, error } = await supabaseServer
-      .from("onboarding_submissions")
-      .select("id, business_name, ghl_contact_id, ghl_opportunity_id")
-      .eq("business_email", email)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    if (error) {
-      console.error("Failed to look up onboarding_submissions for a preview-viewed advance:", error.message);
-      return;
-    }
-    if (!submission?.ghl_contact_id) return;
-
-    const { opportunityId } = await moveOpportunityToStage({
-      contactId: submission.ghl_contact_id,
-      targetStageName: "Preview Viewed",
-      name: `${submission.business_name} — Preview Viewed`,
-    });
-
-    if (opportunityId !== submission.ghl_opportunity_id) {
-      const { error: updateError } = await supabaseServer
-        .from("onboarding_submissions")
-        .update({ ghl_opportunity_id: opportunityId })
-        .eq("id", submission.id);
-      if (updateError) {
-        console.error(
-          `Advanced the opportunity for submission ${submission.id}, but saving the id to Supabase failed:`,
-          updateError.message,
-        );
-      }
-    }
-  } catch (err) {
-    console.error(`Failed to advance the preview-viewed stage for email ${email}:`, err instanceof Error ? err.message : err);
   }
 }

@@ -103,6 +103,48 @@ alter table public.preview_requests
   add column if not exists generated_html text;
 
 -- ============================================================================
+-- Migration: ghl_contact_id / ghl_opportunity_id on preview_requests
+--
+-- The top-of-funnel preview form is now the FIRST point a HighLevel
+-- contact/opportunity is created (immediately on submission, at "New
+-- Lead") — not just the onboarding wizard. These columns let
+-- src/app/p/[publicId]/route.ts move that same opportunity to "Preview
+-- Viewed" directly (no email-correlation join needed), and let
+-- /api/onboarding-submissions confirm it's reusing the same record rather
+-- than guessing. Nullable: rows created before this migration, or a row
+-- whose HighLevel push failed, simply have no value here yet.
+-- This file is NOT run automatically — apply manually via the Supabase SQL
+-- editor, same as the rest of this file.
+-- ============================================================================
+alter table public.preview_requests
+  add column if not exists ghl_contact_id text,
+  add column if not exists ghl_opportunity_id text;
+
+-- ============================================================================
+-- Migration: Meta attribution capture (Phase 0 of the marketing
+-- intelligence architecture)
+--
+-- Captured once, client-side, the moment a visitor lands on /preview —
+-- before any redirect can drop it. Everything downstream (onboarding,
+-- Stripe) traces back to the ad via preview_requests.id, never by relying
+-- on fbclid surviving the whole funnel. fbclid itself is kept only for
+-- audit/debugging, not as a join key.
+-- This file is NOT run automatically — apply manually via the Supabase SQL
+-- editor, same as the rest of this file.
+-- ============================================================================
+alter table public.preview_requests
+  add column if not exists meta_ad_id text,
+  add column if not exists meta_adset_id text,
+  add column if not exists meta_campaign_id text,
+  add column if not exists meta_creative_id text,
+  add column if not exists fbclid text,
+  add column if not exists utm_source text,
+  add column if not exists utm_medium text,
+  add column if not exists utm_campaign text,
+  add column if not exists utm_content text,
+  add column if not exists utm_term text;
+
+-- ============================================================================
 -- onboarding_submissions
 --
 -- Stores the business/contact details collected by the onboarding wizard
@@ -191,6 +233,22 @@ create trigger onboarding_submissions_set_updated_at
 alter table public.onboarding_submissions enable row level security;
 
 -- ============================================================================
+-- Migration: preview_request_id on onboarding_submissions
+--
+-- The real join key back to preview_requests (and from there, the Meta
+-- attribution captured on it) — set from the `preview` id onboarding.html
+-- already carries in its URL, looked up server-side. Deliberately just a
+-- foreign key, not a copy of the attribution columns themselves: the join
+-- is one query away, so there's nothing to keep in sync.
+-- Nullable: a submission can arrive without ever having gone through
+-- /preview (e.g. a direct onboarding link).
+-- This file is NOT run automatically — apply manually via the Supabase SQL
+-- editor, same as the rest of this file.
+-- ============================================================================
+alter table public.onboarding_submissions
+  add column if not exists preview_request_id uuid references public.preview_requests(id);
+
+-- ============================================================================
 -- stripe_processed_events
 --
 -- The real idempotency lock for the Stripe webhook. Stripe can and does
@@ -227,3 +285,313 @@ alter table public.stripe_processed_events enable row level security;
 -- opening the base table.
 -- ============================================================================
 alter table public.preview_requests enable row level security;
+
+-- ============================================================================
+-- Migration: Phase 1 — read-only marketing intelligence layer
+--
+-- Adds:
+--   - client_id on the funnel spine tables, defaulted to 'velxo' — Velxo is
+--     the only tenant today, but every table a future client's data could
+--     live in needs this column now so onboarding a second client is a
+--     WHERE clause later, not a migration.
+--   - ad_daily_spend: a lightweight daily snapshot of Meta spend/impressions
+--     /clicks per ad, synced from the Meta MCP. NOT a copy of Meta's rich
+--     object model — just enough to JOIN spend against funnel outcomes in
+--     plain SQL, which a live API call per query can't do efficiently.
+--   - v_ad_funnel / v_ad_revenue: views, not tables — every field here
+--     already exists on preview_requests/onboarding_submissions; these
+--     make the join reusable instead of duplicating data.
+--   - fn_ad_performance / fn_funnel_breakdown: Postgres FUNCTIONS, not
+--     plain views, specifically because every metric needs a caller-
+--     supplied date window — a view can't take parameters, and baking an
+--     implicit "all time" window into a view is exactly what "every metric
+--     needs a clearly defined date window" rules out.
+--
+-- This file is NOT run automatically — apply manually via the Supabase SQL
+-- editor, same as the rest of this file.
+-- ============================================================================
+
+alter table public.preview_requests
+  add column if not exists client_id text not null default 'velxo';
+
+alter table public.onboarding_submissions
+  add column if not exists client_id text not null default 'velxo';
+
+-- ── ad_daily_spend ──────────────────────────────────────────────────────────
+-- One row per (client_id, ad_id, date). Populated by a sync step that calls
+-- the Meta Marketing API directly (velxo-intelligence-mcp's
+-- scripts/sync-ad-spend.ts) — the Meta MCP itself stays completely
+-- unmodified and read-only; this is a separate, one-way consumer of Meta's
+-- public API using the same read-only credentials. Not on a schedule yet —
+-- run manually until a cron trigger is wired up.
+create table if not exists public.ad_daily_spend (
+  id          uuid primary key default gen_random_uuid(),
+  client_id   text not null default 'velxo',
+  ad_id       text not null,
+  date        date not null,
+  spend_aud   numeric not null default 0,
+  impressions integer not null default 0,
+  clicks      integer not null default 0,
+  link_clicks integer not null default 0,
+  synced_at   timestamptz not null default now(),
+  unique (client_id, ad_id, date)
+);
+
+create index if not exists ad_daily_spend_ad_id_idx on public.ad_daily_spend (client_id, ad_id, date);
+
+alter table public.ad_daily_spend enable row level security;
+
+-- ── v_ad_funnel ─────────────────────────────────────────────────────────────
+-- One row per preview_requests row — the funnel spine, per lead.
+create or replace view public.v_ad_funnel as
+select
+  pr.client_id,
+  pr.id as preview_request_id,
+  pr.meta_ad_id,
+  pr.meta_adset_id,
+  pr.meta_campaign_id,
+  pr.meta_creative_id,
+  pr.suburb,
+  pr.created_at as preview_requested_at,
+  pr.preview_viewed_at,
+  (pr.preview_viewed_at is not null) as was_viewed,
+  os.id as onboarding_submission_id,
+  os.created_at as onboarding_submitted_at,
+  (os.id is not null) as did_onboard,
+  os.status as onboarding_status,
+  (os.status = 'deposit_paid') as did_deposit,
+  os.deposit_paid_at
+from public.preview_requests pr
+left join public.onboarding_submissions os on os.preview_request_id = pr.id;
+
+-- ── v_ad_revenue ────────────────────────────────────────────────────────────
+-- One row per paid deposit, derived entirely from onboarding_submissions'
+-- existing payment columns — no new revenue_events TABLE, since there's
+-- nothing to store that isn't already captured there. amount_aud mirrors
+-- DEPOSIT_VALUE_AUD in src/lib/highlevel.ts; this is the one place a real
+-- per-transaction amount column would replace a hardcoded constant once
+-- pricing varies (completion payments, tiers, refunds).
+create or replace view public.v_ad_revenue as
+select
+  os.client_id,
+  os.id as onboarding_submission_id,
+  os.preview_request_id,
+  os.stripe_session_id,
+  os.deposit_paid_at as paid_at,
+  500::numeric as amount_aud,
+  'deposit'::text as payment_type
+from public.onboarding_submissions os
+where os.status = 'deposit_paid';
+
+-- ── fn_ad_performance ───────────────────────────────────────────────────────
+-- The one function backing every ad-level MCP tool — get_ad_funnel_performance,
+-- get_ad_revenue_performance, compare_ads, and get_top_creative_angles all
+-- call this with different ad_id filters applied, not different SQL.
+-- p_ad_ids null = every ad seen in the window. Starts from a full outer
+-- join and coalesces to 0 so an ad with spend but zero leads, or leads but
+-- zero deposits, is returned with zeros rather than dropped.
+create or replace function public.fn_ad_performance(
+  p_client_id text,
+  p_since date,
+  p_until date,
+  p_ad_ids text[] default null
+)
+returns table (
+  client_id text,
+  meta_ad_id text,
+  preview_requests bigint,
+  preview_views bigint,
+  onboarding_submissions bigint,
+  deposits bigint,
+  revenue_aud numeric,
+  spend_aud numeric,
+  impressions bigint,
+  clicks bigint
+)
+language sql
+stable
+as $$
+  with funnel_agg as (
+    select
+      f.client_id,
+      f.meta_ad_id,
+      count(*) as preview_requests,
+      count(*) filter (where f.was_viewed) as preview_views,
+      count(*) filter (where f.did_onboard) as onboarding_submissions,
+      count(*) filter (where f.did_deposit) as deposits
+    from public.v_ad_funnel f
+    where f.meta_ad_id is not null
+      and f.client_id = p_client_id
+      and f.preview_requested_at::date between p_since and p_until
+      and (p_ad_ids is null or f.meta_ad_id = any(p_ad_ids))
+    group by f.client_id, f.meta_ad_id
+  ),
+  revenue_agg as (
+    select
+      f.client_id,
+      f.meta_ad_id,
+      coalesce(sum(r.amount_aud), 0) as revenue_aud
+    from public.v_ad_funnel f
+    join public.v_ad_revenue r on r.preview_request_id = f.preview_request_id
+    where f.meta_ad_id is not null
+      and f.client_id = p_client_id
+      and r.paid_at::date between p_since and p_until
+      and (p_ad_ids is null or f.meta_ad_id = any(p_ad_ids))
+    group by f.client_id, f.meta_ad_id
+  ),
+  spend_agg as (
+    select
+      s.client_id,
+      s.ad_id as meta_ad_id,
+      sum(s.spend_aud) as spend_aud,
+      sum(s.impressions) as impressions,
+      sum(s.clicks) as clicks
+    from public.ad_daily_spend s
+    where s.client_id = p_client_id
+      and s.date between p_since and p_until
+      and (p_ad_ids is null or s.ad_id = any(p_ad_ids))
+    group by s.client_id, s.ad_id
+  )
+  select
+    coalesce(fa.client_id, sa.client_id) as client_id,
+    coalesce(fa.meta_ad_id, sa.meta_ad_id) as meta_ad_id,
+    coalesce(fa.preview_requests, 0) as preview_requests,
+    coalesce(fa.preview_views, 0) as preview_views,
+    coalesce(fa.onboarding_submissions, 0) as onboarding_submissions,
+    coalesce(fa.deposits, 0) as deposits,
+    coalesce(ra.revenue_aud, 0) as revenue_aud,
+    coalesce(sa.spend_aud, 0) as spend_aud,
+    coalesce(sa.impressions, 0) as impressions,
+    coalesce(sa.clicks, 0) as clicks
+  from funnel_agg fa
+  full outer join spend_agg sa on sa.meta_ad_id = fa.meta_ad_id and sa.client_id = fa.client_id
+  left join revenue_agg ra
+    on ra.meta_ad_id = coalesce(fa.meta_ad_id, sa.meta_ad_id)
+    and ra.client_id = coalesce(fa.client_id, sa.client_id);
+$$;
+
+-- ── fn_funnel_breakdown ─────────────────────────────────────────────────────
+-- Groups the funnel by a dimension already captured on preview_requests —
+-- no new columns needed for suburb or day/hour. Backs get_funnel_breakdown.
+create or replace function public.fn_funnel_breakdown(
+  p_client_id text,
+  p_since date,
+  p_until date,
+  p_dimension text, -- 'suburb' | 'day_of_week' | 'hour_of_day'
+  p_ad_id text default null
+)
+returns table (
+  dimension_value text,
+  preview_requests bigint,
+  preview_views bigint,
+  onboarding_submissions bigint,
+  deposits bigint
+)
+language sql
+stable
+as $$
+  select
+    case p_dimension
+      when 'suburb' then f.suburb
+      when 'day_of_week' then to_char(f.preview_requested_at, 'Day')
+      when 'hour_of_day' then to_char(f.preview_requested_at, 'HH24') || ':00'
+      else 'unknown'
+    end as dimension_value,
+    count(*) as preview_requests,
+    count(*) filter (where f.was_viewed) as preview_views,
+    count(*) filter (where f.did_onboard) as onboarding_submissions,
+    count(*) filter (where f.did_deposit) as deposits
+  from public.v_ad_funnel f
+  where f.client_id = p_client_id
+    and f.preview_requested_at::date between p_since and p_until
+    and (p_ad_id is null or f.meta_ad_id = p_ad_id)
+  group by 1
+  order by 2 desc;
+$$;
+
+-- ── fn_creative_performance ─────────────────────────────────────────────────
+-- Backs get_top_creative_angles. Grouped by meta_creative_id rather than
+-- meta_ad_id — "angle" currently means Meta's creative_id, since no
+-- separate angle/hook taxonomy is captured yet (that's a Phase 4 concern,
+-- not built here). Spend has no direct per-creative column to read (Meta
+-- insights are fetched per-ad, not per-creative) — this attributes an ad's
+-- spend to whichever creative(s) that ad showed leads for in the window,
+-- via array_agg(distinct meta_ad_id). That's an approximation: correct as
+-- long as an ad's creative doesn't change mid-flight, which is true for
+-- every ad running today, but worth revisiting if that ever changes.
+create or replace function public.fn_creative_performance(
+  p_client_id text,
+  p_since date,
+  p_until date
+)
+returns table (
+  client_id text,
+  meta_creative_id text,
+  preview_requests bigint,
+  preview_views bigint,
+  onboarding_submissions bigint,
+  deposits bigint,
+  revenue_aud numeric,
+  spend_aud numeric,
+  impressions bigint,
+  clicks bigint
+)
+language sql
+stable
+as $$
+  with funnel_agg as (
+    select
+      f.client_id,
+      f.meta_creative_id,
+      count(*) as preview_requests,
+      count(*) filter (where f.was_viewed) as preview_views,
+      count(*) filter (where f.did_onboard) as onboarding_submissions,
+      count(*) filter (where f.did_deposit) as deposits,
+      array_agg(distinct f.meta_ad_id) filter (where f.meta_ad_id is not null) as ad_ids
+    from public.v_ad_funnel f
+    where f.meta_creative_id is not null
+      and f.client_id = p_client_id
+      and f.preview_requested_at::date between p_since and p_until
+    group by f.client_id, f.meta_creative_id
+  ),
+  revenue_agg as (
+    select
+      f.client_id,
+      f.meta_creative_id,
+      coalesce(sum(r.amount_aud), 0) as revenue_aud
+    from public.v_ad_funnel f
+    join public.v_ad_revenue r on r.preview_request_id = f.preview_request_id
+    where f.meta_creative_id is not null
+      and f.client_id = p_client_id
+      and r.paid_at::date between p_since and p_until
+    group by f.client_id, f.meta_creative_id
+  ),
+  spend_agg as (
+    select
+      fa.client_id,
+      fa.meta_creative_id,
+      coalesce(sum(s.spend_aud), 0) as spend_aud,
+      coalesce(sum(s.impressions), 0) as impressions,
+      coalesce(sum(s.clicks), 0) as clicks
+    from funnel_agg fa
+    left join public.ad_daily_spend s
+      on s.client_id = fa.client_id
+      and s.ad_id = any(fa.ad_ids)
+      and s.date between p_since and p_until
+    group by fa.client_id, fa.meta_creative_id
+  )
+  select
+    fa.client_id,
+    fa.meta_creative_id,
+    fa.preview_requests,
+    fa.preview_views,
+    fa.onboarding_submissions,
+    fa.deposits,
+    coalesce(ra.revenue_aud, 0) as revenue_aud,
+    coalesce(sp.spend_aud, 0) as spend_aud,
+    coalesce(sp.impressions, 0) as impressions,
+    coalesce(sp.clicks, 0) as clicks
+  from funnel_agg fa
+  left join revenue_agg ra on ra.meta_creative_id = fa.meta_creative_id and ra.client_id = fa.client_id
+  left join spend_agg sp on sp.meta_creative_id = fa.meta_creative_id and sp.client_id = fa.client_id;
+$$;

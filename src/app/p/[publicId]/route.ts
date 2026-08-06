@@ -2,7 +2,9 @@ import "server-only";
 import { after } from "next/server";
 import { supabaseServer } from "@/lib/supabase/server";
 import { buildOnboardingUrl } from "@/lib/routes";
-import { advancePreviewViewedByEmail } from "@/lib/leadFulfillment";
+import { advancePreviewViewedById } from "@/lib/leadFulfillment";
+import { buildAiAutomationsSection } from "@/lib/preview/aiAutomationsSection";
+import { buildScrollCue } from "@/lib/preview/scrollCue";
 import type { PreviewRequestRow } from "@/lib/preview/types";
 
 type Params = { publicId: string };
@@ -213,6 +215,8 @@ ${CONTRAST_FIX_CSS}
 <a id="velxo-ext-cta" href="${onboardingUrl}">Launch This For My Business</a>
 ${buildContactFormScript(accent)}
 ${ANIMATION_ENHANCEMENT_SCRIPT}
+${buildAiAutomationsSection()}
+${buildScrollCue()}
 `;
 }
 
@@ -299,11 +303,11 @@ export async function GET(_request: Request, { params }: { params: Promise<Param
 
   await markViewed(publicId);
 
-  // Advances the matching onboarding_submissions opportunity to "Preview
-  // Viewed" (a no-op if that business hasn't submitted the onboarding form
-  // yet, or has already moved past this stage) — after the response is
-  // sent, so a slow HighLevel call never delays serving the preview.
-  after(() => advancePreviewViewedByEmail(row.email));
+  // Advances this row's own HighLevel opportunity (created at "New Lead"
+  // when the /preview form was submitted) to "Preview Viewed" — a no-op if
+  // it's already at or past that stage — after the response is sent, so a
+  // slow HighLevel call never delays serving the preview.
+  after(() => advancePreviewViewedById(row));
 
   if (row.generated_html) {
     return new Response(withOverlay(row.generated_html, buildInjectedOverlay(row)), {

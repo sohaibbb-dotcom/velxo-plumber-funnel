@@ -95,7 +95,7 @@ export async function processDepositPaid(session: Stripe.Checkout.Session, event
   const { opportunityId } = await moveOpportunityToStage({
     contactId,
     targetStageName: "Deposit Paid",
-    name: `${submission.business_name} — Deposit Paid`,
+    name: submission.business_name,
     monetaryValue: DEPOSIT_VALUE_AUD,
   });
 

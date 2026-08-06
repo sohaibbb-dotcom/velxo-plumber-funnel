@@ -204,6 +204,13 @@ type GhlUpsertOpportunityResponse = {
  * The resolved (possibly unchanged) stage is always sent explicitly on the
  * upsert rather than omitted, so behaviour never depends on undocumented
  * "omit a field to leave it alone" semantics from HighLevel's API.
+ *
+ * `name` is a base label (typically the business name) — the opportunity's
+ * displayed name is built from whatever stage is ACTUALLY resolved below,
+ * not the caller's requested target. Otherwise a call that merely "reuses"
+ * an opportunity already further along (forward-only guard keeps its real
+ * stage) could still overwrite its name to claim the earlier stage it never
+ * moved to.
  */
 export async function moveOpportunityToStage({
   contactId,
@@ -242,7 +249,7 @@ export async function moveOpportunityToStage({
     pipelineId: pipeline.id,
     pipelineStageId: stageIdToSet,
     contactId,
-    name,
+    name: `${name} — ${resolvedStageName}`,
     status: "open",
   };
   if (monetaryValue !== undefined) body.monetaryValue = monetaryValue;

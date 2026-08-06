@@ -1,7 +1,7 @@
 import "server-only";
 import { NextResponse, after } from "next/server";
 import { supabaseServer } from "@/lib/supabase/server";
-import { pushNewLeadToHighLevel } from "@/lib/leadFulfillment";
+import { reuseForOnboarding } from "@/lib/leadFulfillment";
 import type { OnboardingSubmissionRow } from "@/lib/onboarding/types";
 
 /**
@@ -61,6 +61,7 @@ type RequestBody = {
   colourScheme?: unknown;
   googleLink?: unknown;
   notes?: unknown;
+  previewPublicId?: unknown;
 };
 
 function asString(value: unknown): string {
@@ -78,6 +79,30 @@ function asStringArray(value: unknown): string[] {
     .map((v) => stripHtml(v.trim()))
     .filter(Boolean)
     .slice(0, 50);
+}
+
+/**
+ * Resolves the preview_requests row this submission came from, if any —
+ * the Velxo-owned id that carries Meta attribution across the domain hop
+ * from onboarding.html. Best-effort: a missing, invalid, or unmatched id
+ * never fails the submission, it just leaves this row unattributed (e.g.
+ * someone reached onboarding directly, without going through /preview).
+ */
+async function findPreviewRequestId(rawPreviewPublicId: unknown): Promise<string | null> {
+  const publicId = asString(rawPreviewPublicId);
+  if (!publicId) return null;
+
+  const { data, error } = await supabaseServer
+    .from("preview_requests")
+    .select("id")
+    .eq("public_id", publicId)
+    .maybeSingle();
+
+  if (error) {
+    console.error("Failed to look up preview_requests for attribution:", error.message);
+    return null;
+  }
+  return data?.id ?? null;
 }
 
 export async function POST(request: Request) {
@@ -146,6 +171,8 @@ export async function POST(request: Request) {
     );
   }
 
+  const previewRequestId = await findPreviewRequestId(body.previewPublicId);
+
   const { data: inserted, error: insertError } = await supabaseServer
     .from("onboarding_submissions")
     .insert({
@@ -160,6 +187,7 @@ export async function POST(request: Request) {
       colour_scheme: colourScheme,
       google_link: googleLink,
       notes,
+      preview_request_id: previewRequestId,
     })
     .select("*")
     .single();
@@ -172,11 +200,11 @@ export async function POST(request: Request) {
     );
   }
 
-  // Pushed to HighLevel after the response is sent — a slow or down GHL
-  // must never delay or fail the customer-facing submission, which has
+  // Reused (not re-created) after the response is sent — a slow or down
+  // GHL must never delay or fail the customer-facing submission, which has
   // already succeeded in Supabase at this point.
   const submission = inserted as OnboardingSubmissionRow;
-  after(() => pushNewLeadToHighLevel(submission));
+  after(() => reuseForOnboarding(submission));
 
   return NextResponse.json({ success: true, referenceId: inserted.public_id }, { headers });
 }

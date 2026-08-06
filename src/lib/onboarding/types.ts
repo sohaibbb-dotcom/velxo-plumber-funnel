@@ -21,6 +21,7 @@ export type OnboardingSubmissionRow = {
   webhook_event_id: string | null;
   ghl_contact_id: string | null;
   ghl_opportunity_id: string | null;
+  preview_request_id: string | null;
   created_at: string;
   updated_at: string;
 };
