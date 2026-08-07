@@ -3,7 +3,7 @@
 import { motion } from "framer-motion";
 import { ArrowRight, Check, Rocket } from "lucide-react";
 import Link from "next/link";
-import { PREVIEW_FORM_PATH, TRIAL_CTA_HREF } from "@/lib/routes";
+import { PREVIEW_FORM_PATH, TRIAL_CTA_HREF, COMPLETE_TRIAL_CTA_HREF } from "@/lib/routes";
 
 const EASE = [0.16, 1, 0.3, 1] as const;
 
@@ -157,10 +157,10 @@ export function Pricing() {
 
             <div className="mt-8 flex flex-1 flex-col justify-end gap-3">
               <Link
-                href={PREVIEW_FORM_PATH}
+                href={COMPLETE_TRIAL_CTA_HREF}
                 className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-zinc-200 px-6 py-3.5 text-[15px] font-semibold text-zinc-900 transition-colors duration-200 hover:bg-zinc-50"
               >
-                See My Complete Business Preview
+                Start My 30-Day Free Trial
               </Link>
               <p className="text-center text-xs text-zinc-400">{COMPLETE_TRUST_LINE}</p>
             </div>

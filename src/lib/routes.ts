@@ -7,30 +7,27 @@ export const PREVIEW_FORM_PATH = "/preview";
 
 /**
  * The AI Receptionist 30-day trial destination — the in-app /onboarding
- * wizard (src/app/onboarding), not the legacy onboarding.html project.
- * Every CTA that promises the free trial must point here so they move
- * together.
+ * wizard (src/app/onboarding). Every CTA that promises the free trial must
+ * point here so they move together.
  */
 export const TRIAL_CTA_HREF = "/onboarding?plan=ai_receptionist";
 
 /**
- * The real onboarding flow lives in a separate project (VELXO DIGITAL),
- * not in this app — there is no /onboarding route here. Confirmed live at
- * this exact path (note the required .html — the extensionless /onboarding
- * 404s on that deployment).
+ * The Velxo Complete 30-day trial destination — same in-app /onboarding
+ * wizard, different plan. Replaces the old hand-off to the external
+ * VELXO DIGITAL onboarding.html project and its $500 deposit Payment Link,
+ * which this repo no longer links to anywhere.
  */
-const ONBOARDING_BASE_URL = "https://velxo-digital.vercel.app/onboarding.html";
+export const COMPLETE_TRIAL_CTA_HREF = "/onboarding?plan=complete";
 
 /**
- * Builds the onboarding URL for a given preview. `source=meta` is read by
- * onboarding.html itself — kept for traffic-source tracking even though
- * Velxo now has a single package, so it no longer changes what's shown.
- * `preview` carries the public_id through so the session started there
- * can be traced back to this preview.
+ * Builds the in-app onboarding URL for a given preview, so the Complete-plan
+ * CTA shown on a generated preview page (src/app/p/[publicId]/route.ts)
+ * carries the preview's public_id through to onboarding — looked up
+ * server-side in /api/onboarding-submissions to link the two rows, the same
+ * pattern the rest of this app uses for attribution (never re-reading URL
+ * params downstream, only ever an id lookup).
  */
 export function buildOnboardingUrl(publicId: string): string {
-  const url = new URL(ONBOARDING_BASE_URL);
-  url.searchParams.set("source", "meta");
-  url.searchParams.set("preview", publicId);
-  return url.toString();
+  return `${COMPLETE_TRIAL_CTA_HREF}&preview=${encodeURIComponent(publicId)}`;
 }
