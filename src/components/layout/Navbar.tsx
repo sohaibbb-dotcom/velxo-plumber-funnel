@@ -39,7 +39,6 @@ export function Navbar() {
         </nav>
 
         <div className="hidden md:flex">
-          {/* TODO: wire to real trial signup once onboarding/Stripe flow is redesigned */}
           <a href={TRIAL_CTA_HREF} className={buttonVariants({ variant: "primary", size: "md" })}>
             Start My Free 30-Day Trial
           </a>
@@ -76,7 +75,6 @@ export function Navbar() {
                   {item.label}
                 </a>
               ))}
-              {/* TODO: wire to real trial signup once onboarding/Stripe flow is redesigned */}
               <a
                 href={TRIAL_CTA_HREF}
                 onClick={() => setOpen(false)}

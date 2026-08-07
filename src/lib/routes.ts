@@ -6,11 +6,12 @@
 export const PREVIEW_FORM_PATH = "/preview";
 
 /**
- * TODO: replace with the real trial-signup destination once onboarding and
- * Stripe are redesigned around card-on-file 30-day trials. Every CTA that
- * promises the free trial must point here so they move together.
+ * The AI Receptionist 30-day trial destination — the in-app /onboarding
+ * wizard (src/app/onboarding), not the legacy onboarding.html project.
+ * Every CTA that promises the free trial must point here so they move
+ * together.
  */
-export const TRIAL_CTA_HREF = "#";
+export const TRIAL_CTA_HREF = "/onboarding?plan=ai_receptionist";
 
 /**
  * The real onboarding flow lives in a separate project (VELXO DIGITAL),

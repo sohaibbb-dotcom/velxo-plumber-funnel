@@ -101,7 +101,6 @@ export function Hero() {
           variants={fadeUp}
           className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row"
         >
-          {/* TODO: wire to real trial signup once onboarding/Stripe flow is redesigned */}
           <a
             href={TRIAL_CTA_HREF}
             className={buttonVariants({

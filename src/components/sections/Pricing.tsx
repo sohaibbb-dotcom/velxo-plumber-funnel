@@ -102,7 +102,6 @@ export function Pricing() {
             </ul>
 
             <div className="relative mt-8 flex flex-1 flex-col justify-end gap-3">
-              {/* TODO: wire to real trial signup once onboarding/Stripe flow is redesigned */}
               <a
                 href={TRIAL_CTA_HREF}
                 className="group inline-flex items-center justify-center gap-2 rounded-full bg-white px-6 py-3.5 text-[15px] font-semibold text-zinc-900 transition-colors duration-200 hover:bg-zinc-100"
@@ -207,7 +206,6 @@ export function Pricing() {
             <h3 className="mx-auto max-w-lg text-2xl font-semibold tracking-tight text-balance text-white sm:text-3xl md:text-4xl">
               Ready to stop losing plumbing jobs?
             </h3>
-            {/* TODO: wire to real trial signup once onboarding/Stripe flow is redesigned */}
             <a
               href={TRIAL_CTA_HREF}
               className="mt-8 inline-flex items-center justify-center rounded-full bg-white px-7 py-3.5 text-[15px] font-semibold text-zinc-900 transition-colors duration-200 hover:bg-zinc-100"
