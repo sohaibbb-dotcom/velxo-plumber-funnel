@@ -2,46 +2,82 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence } from "framer-motion";
 import { Wrench } from "lucide-react";
 import { siteConfig } from "@/config/site";
+import { cn } from "@/lib/utils";
 import { DEFAULT_COLOR_SCHEME } from "@/lib/colorSchemes";
 import { PLAN_LABELS, type Plan } from "@/lib/plans";
 import { StepShell } from "@/components/onboarding/StepShell";
 import { StepLoading } from "@/components/onboarding/StepLoading";
 import { StepError } from "@/components/onboarding/StepError";
+import { StepProgress } from "@/components/onboarding/StepProgress";
+import { ProductExplainer } from "@/components/onboarding/ProductExplainer";
+import { TrialReassurance } from "@/components/onboarding/TrialReassurance";
+import { WhatHappensNext } from "@/components/onboarding/WhatHappensNext";
 import { BusinessStep, BUSINESS_STEP_META } from "@/components/onboarding/steps/BusinessStep";
 import { ContactStep, CONTACT_STEP_META } from "@/components/onboarding/steps/ContactStep";
-import { ServicesStep, SERVICES_STEP_META } from "@/components/onboarding/steps/ServicesStep";
-import { BrandStep, BRAND_STEP_META } from "@/components/onboarding/steps/BrandStep";
+import { AiSetupStep, AI_SETUP_STEP_META } from "@/components/onboarding/steps/AiSetupStep";
+import { WebsiteSetupStep, WEBSITE_SETUP_STEP_META } from "@/components/onboarding/steps/WebsiteSetupStep";
+import { ReviewActivateStep, REVIEW_ACTIVATE_STEP_META } from "@/components/onboarding/steps/ReviewActivateStep";
 import type { OnboardingFormData } from "@/components/onboarding/types";
 
-const EASE = [0.16, 1, 0.3, 1] as const;
 const GENERIC_ERROR = "We couldn't save your details. Please try again.";
 
-const FORM_STEPS = ["business", "contact", "services", "brand"] as const;
-type FormStep = (typeof FORM_STEPS)[number];
-type Phase = "form" | "loading" | "error";
+const AI_RECEPTIONIST_STEPS = ["business", "contact", "aiSetup", "activate"] as const;
+const COMPLETE_STEPS = ["business", "contact", "aiSetup", "websiteSetup", "activate"] as const;
+type FormStep = (typeof COMPLETE_STEPS)[number];
 
-const STEP_META: Record<FormStep, { eyebrow: string; title: string; description: string }> = {
+const STEP_LABELS: Record<FormStep, string> = {
+  business: "Business",
+  contact: "Contact",
+  aiSetup: "AI Setup",
+  websiteSetup: "Website Setup",
+  activate: "Activate",
+};
+
+const STEP_META: Record<FormStep, { title: string; description: string }> = {
   business: BUSINESS_STEP_META,
   contact: CONTACT_STEP_META,
-  services: SERVICES_STEP_META,
-  brand: BRAND_STEP_META,
+  aiSetup: AI_SETUP_STEP_META,
+  websiteSetup: WEBSITE_SETUP_STEP_META,
+  activate: REVIEW_ACTIVATE_STEP_META,
 };
 
 const emptyForm: OnboardingFormData = {
   businessName: "",
   abn: "",
   businessAddress: "",
+  tradingName: "",
+  existingWebsite: "",
+  verificationDocumentType: null,
+  verificationDocumentPath: null,
+  verificationDocumentFileName: null,
+  verificationDocumentOtherDescription: "",
+  addressVerificationDocumentType: null,
+  addressVerificationDocumentPath: null,
+  addressVerificationDocumentFileName: null,
   ownerName: "",
   businessPhone: "",
   businessEmail: "",
+  notificationMobile: "",
   services: [],
   suburbsCovered: "",
-  colourScheme: DEFAULT_COLOR_SCHEME.name,
+  openingHours: "",
+  offersEmergencyService: null,
+  bookingMethod: "",
+  aiOffersBookingTimes: null,
+  bookingDestination: "",
+  urgentJobHandling: "",
+  useExistingNumber: null,
+  numberPortingNotes: "",
   googleLink: "",
   notes: "",
+  colourScheme: DEFAULT_COLOR_SCHEME.name,
+  logoPath: null,
+  logoFileName: null,
+  websitePhotoPaths: [],
+  websiteNotes: "",
   referralSource: "",
 };
 
@@ -60,12 +96,31 @@ async function submitOnboarding(
         businessName: data.businessName,
         abn: data.abn,
         businessAddress: data.businessAddress,
+        tradingName: data.tradingName,
+        existingWebsite: data.existingWebsite,
+        verificationDocumentType: data.verificationDocumentType,
+        verificationDocumentPath: data.verificationDocumentPath,
+        verificationDocumentOtherDescription: data.verificationDocumentOtherDescription,
+        addressVerificationDocumentType: data.addressVerificationDocumentType,
+        addressVerificationDocumentPath: data.addressVerificationDocumentPath,
+        ownerName: data.ownerName,
         businessPhone: data.businessPhone,
         businessEmail: data.businessEmail,
-        ownerName: data.ownerName,
+        notificationMobile: data.notificationMobile,
         services: data.services,
         suburbsCovered: data.suburbsCovered,
+        openingHours: data.openingHours,
+        offersEmergencyService: data.offersEmergencyService,
+        bookingMethod: data.bookingMethod,
+        aiOffersBookingTimes: data.aiOffersBookingTimes,
+        bookingDestination: data.bookingDestination,
+        urgentJobHandling: data.urgentJobHandling,
+        useExistingNumber: data.useExistingNumber,
+        numberPortingNotes: data.numberPortingNotes,
         colourScheme: data.colourScheme,
+        logoPath: data.logoPath,
+        websitePhotoPaths: data.websitePhotoPaths.map((p) => p.path),
+        websiteNotes: data.websiteNotes,
         googleLink: data.googleLink,
         notes: data.notes,
         referralSource: data.referralSource,
@@ -116,14 +171,16 @@ export function OnboardingFlow({
   plan: Plan;
   previewPublicId: string | null;
 }) {
+  const FORM_STEPS = plan === "complete" ? COMPLETE_STEPS : AI_RECEPTIONIST_STEPS;
+
   const [formStepIndex, setFormStepIndex] = useState(0);
-  const [phase, setPhase] = useState<Phase>("form");
+  const [phase, setPhase] = useState<"form" | "loading" | "error">("form");
   const [formData, setFormData] = useState<OnboardingFormData>(emptyForm);
   const [errorMessage, setErrorMessage] = useState(GENERIC_ERROR);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const currentFormStep = FORM_STEPS[formStepIndex];
-  const progress = phase === "form" ? (formStepIndex / FORM_STEPS.length) * 100 : 100;
+  const isLastStep = formStepIndex === FORM_STEPS.length - 1;
 
   const update =
     (field: keyof OnboardingFormData) =>
@@ -194,40 +251,57 @@ export function OnboardingFlow({
         </span>
       </header>
 
-      <main className="flex flex-1 items-center justify-center px-4 py-10 sm:px-6 lg:px-8">
-        <div className="w-full max-w-xl">
-          <div className="mb-6 h-1 w-full overflow-hidden rounded-full bg-zinc-100">
-            <motion.div
-              className="h-full rounded-full bg-gradient-to-r from-blue-600 to-sky-500"
-              animate={{ width: `${progress}%` }}
-              transition={{ duration: 0.5, ease: EASE }}
-            />
+      <main
+        className={cn(
+          "mx-auto flex w-full flex-1 flex-col gap-10 px-4 py-10 sm:px-6 lg:px-8 lg:py-14",
+          plan === "ai_receptionist" ? "max-w-6xl lg:flex-row lg:items-start" : "max-w-xl",
+        )}
+      >
+        {plan === "ai_receptionist" && (
+          <div className="flex flex-col gap-6 lg:sticky lg:top-14 lg:w-[420px] lg:shrink-0">
+            <ProductExplainer />
+            <TrialReassurance plan={plan} />
           </div>
+        )}
 
-          <div className="rounded-3xl border border-zinc-200 bg-white p-6 shadow-[0_8px_40px_-12px_rgba(0,0,0,0.12)] sm:p-10">
+        <div className="w-full flex-1">
+          <StepProgress labels={FORM_STEPS.map((s) => STEP_LABELS[s])} activeIndex={formStepIndex} />
+          <WhatHappensNext />
+
+          <div className="mt-6 rounded-3xl border border-zinc-200 bg-white p-6 shadow-[0_8px_40px_-12px_rgba(0,0,0,0.12)] sm:p-10">
             <AnimatePresence mode="wait">
               {phase === "form" && (
                 <StepShell
                   key={currentFormStep}
-                  eyebrow={meta.eyebrow}
+                  eyebrow={`Step ${formStepIndex + 1} of ${FORM_STEPS.length}`}
                   title={meta.title}
                   description={meta.description}
                   onSubmit={goNext}
                   onBack={goBack}
                   isFirstStep={formStepIndex === 0}
-                  isLastStep={formStepIndex === FORM_STEPS.length - 1}
+                  submitLabel={isLastStep ? "Continue to Secure Checkout" : "Continue"}
                 >
-                  {currentFormStep === "business" && <BusinessStep formData={formData} update={update} />}
-                  {currentFormStep === "contact" && <ContactStep formData={formData} update={update} />}
-                  {currentFormStep === "services" && (
-                    <ServicesStep formData={formData} update={update} toggleService={toggleService} />
+                  {currentFormStep === "business" && (
+                    <BusinessStep formData={formData} update={update} setFormData={setFormData} />
                   )}
-                  {currentFormStep === "brand" && (
-                    <BrandStep
+                  {currentFormStep === "contact" && <ContactStep formData={formData} update={update} />}
+                  {currentFormStep === "aiSetup" && (
+                    <AiSetupStep
                       formData={formData}
                       update={update}
+                      toggleService={toggleService}
+                      setFormData={setFormData}
+                    />
+                  )}
+                  {currentFormStep === "websiteSetup" && (
+                    <WebsiteSetupStep
+                      formData={formData}
+                      setFormData={setFormData}
                       onColourChange={(name) => setFormData((prev) => ({ ...prev, colourScheme: name }))}
                     />
+                  )}
+                  {currentFormStep === "activate" && (
+                    <ReviewActivateStep formData={formData} update={update} plan={plan} />
                   )}
                 </StepShell>
               )}

@@ -1,4 +1,8 @@
 import type { Plan } from "@/lib/plans";
+import type {
+  VerificationDocumentType,
+  AddressVerificationDocumentType,
+} from "@/lib/onboarding/verificationDocuments";
 
 /** Raw shape of a public.onboarding_submissions row, as returned by Supabase. */
 export type OnboardingSubmissionRow = {
@@ -35,6 +39,28 @@ export type OnboardingSubmissionRow = {
   trial_starts_at: string | null;
   trial_ends_at: string | null;
   payment_method_status: string | null;
+  // ── Onboarding activation redesign (Phase 4) ───────────────────────────
+  // All nullable: legacy onboarding.html submissions never send these, and
+  // several are only ever populated depending on plan/document type.
+  trading_name: string | null;
+  existing_website: string | null;
+  notification_mobile: string | null;
+  opening_hours: string | null;
+  offers_emergency_service: boolean | null;
+  booking_method: string | null;
+  ai_offers_booking_times: boolean | null;
+  booking_destination: string | null;
+  urgent_job_handling: string | null;
+  use_existing_number: boolean | null;
+  number_porting_notes: string | null;
+  logo_path: string | null;
+  website_photo_paths: string[];
+  website_notes: string | null;
+  verification_document_type: VerificationDocumentType | null;
+  verification_document_path: string | null;
+  verification_document_other_description: string | null;
+  address_verification_document_type: AddressVerificationDocumentType | null;
+  address_verification_document_path: string | null;
   created_at: string;
   updated_at: string;
 };

@@ -16,7 +16,7 @@ export function StepShell({
   onSubmit,
   onBack,
   isFirstStep,
-  isLastStep,
+  submitLabel = "Continue",
   children,
 }: {
   eyebrow: string;
@@ -25,7 +25,7 @@ export function StepShell({
   onSubmit: () => void;
   onBack: () => void;
   isFirstStep: boolean;
-  isLastStep: boolean;
+  submitLabel?: string;
   children: ReactNode;
 }) {
   const handleSubmit = (e: FormEvent) => {
@@ -64,7 +64,7 @@ export function StepShell({
             type="submit"
             className={cn(buttonVariants({ variant: "primary", size: "lg" }), "flex-1")}
           >
-            {isLastStep ? "Continue to Payment" : "Continue"}
+            {submitLabel}
           </button>
         </div>
       </form>

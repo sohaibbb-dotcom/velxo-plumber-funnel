@@ -3,6 +3,11 @@ import { NextResponse, after } from "next/server";
 import { supabaseServer } from "@/lib/supabase/server";
 import { reuseForOnboarding } from "@/lib/leadFulfillment";
 import { isPlan } from "@/lib/plans";
+import {
+  isVerificationDocumentType,
+  isAddressVerificationDocumentType,
+  requiresAddressProof,
+} from "@/lib/onboarding/verificationDocuments";
 import type { OnboardingSubmissionRow } from "@/lib/onboarding/types";
 
 /**
@@ -46,6 +51,16 @@ const MAX_LENGTHS = {
   googleLink: 500,
   notes: 2000,
   referralSource: 200,
+  tradingName: 200,
+  existingWebsite: 500,
+  notificationMobile: 32,
+  openingHours: 500,
+  bookingMethod: 500,
+  bookingDestination: 500,
+  urgentJobHandling: 500,
+  numberPortingNotes: 1000,
+  websiteNotes: 2000,
+  verificationDocumentOtherDescription: 200,
 } as const;
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -71,6 +86,28 @@ type RequestBody = {
    * backward compatibility: legacy onboarding.html doesn't send it yet.
    */
   plan?: unknown;
+  // ── Onboarding activation redesign (Phase 4) — only ever sent by the new
+  // in-app wizard (i.e. whenever `plan` is present). Legacy onboarding.html
+  // never sends these, so all requirement checks below are gated on `plan`.
+  tradingName?: unknown;
+  existingWebsite?: unknown;
+  notificationMobile?: unknown;
+  openingHours?: unknown;
+  offersEmergencyService?: unknown;
+  bookingMethod?: unknown;
+  aiOffersBookingTimes?: unknown;
+  bookingDestination?: unknown;
+  urgentJobHandling?: unknown;
+  useExistingNumber?: unknown;
+  numberPortingNotes?: unknown;
+  logoPath?: unknown;
+  websitePhotoPaths?: unknown;
+  websiteNotes?: unknown;
+  verificationDocumentType?: unknown;
+  verificationDocumentPath?: unknown;
+  verificationDocumentOtherDescription?: unknown;
+  addressVerificationDocumentType?: unknown;
+  addressVerificationDocumentPath?: unknown;
 };
 
 function asString(value: unknown): string {
@@ -88,6 +125,10 @@ function asStringArray(value: unknown): string[] {
     .map((v) => stripHtml(v.trim()))
     .filter(Boolean)
     .slice(0, 50);
+}
+
+function asBoolean(value: unknown): boolean | null {
+  return typeof value === "boolean" ? value : null;
 }
 
 /**
@@ -125,6 +166,22 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: false, error: GENERIC_ERROR }, { status: 400, headers });
   }
 
+  // Optional: absent entirely for legacy onboarding.html submissions. If
+  // present, it must be one of the canonical values — never silently
+  // dropped, since a caller that explicitly sent a plan expects it stored.
+  if (body.plan !== undefined && !isPlan(body.plan)) {
+    return NextResponse.json(
+      { success: false, error: "Invalid plan selected." },
+      { status: 400, headers },
+    );
+  }
+  const plan = isPlan(body.plan) ? body.plan : null;
+  // Everything below this point that's gated on `isNewWizard` only ever
+  // applies to submissions from the new in-app /onboarding wizard — legacy
+  // onboarding.html submissions (plan === null) keep the original,
+  // pre-Phase-4 required-field set so that flow is never broken.
+  const isNewWizard = plan !== null;
+
   const businessName = stripHtml(asString(body.businessName));
   const abn = stripHtml(asString(body.abn)) || null;
   const businessAddress = stripHtml(asString(body.businessAddress)) || null;
@@ -138,16 +195,46 @@ export async function POST(request: Request) {
   const notes = stripHtml(asString(body.notes)) || null;
   const referralSource = stripHtml(asString(body.referralSource)) || null;
 
-  // Optional: absent entirely for legacy onboarding.html submissions. If
-  // present, it must be one of the canonical values — never silently
-  // dropped, since a caller that explicitly sent a plan expects it stored.
-  if (body.plan !== undefined && !isPlan(body.plan)) {
-    return NextResponse.json(
-      { success: false, error: "Invalid plan selected." },
-      { status: 400, headers },
-    );
-  }
-  const plan = isPlan(body.plan) ? body.plan : null;
+  const tradingName = stripHtml(asString(body.tradingName)) || null;
+  const existingWebsite = asString(body.existingWebsite) || null;
+  const notificationMobile = asString(body.notificationMobile) || null;
+  const openingHours = stripHtml(asString(body.openingHours)) || null;
+  const offersEmergencyService = asBoolean(body.offersEmergencyService);
+  const bookingMethod = stripHtml(asString(body.bookingMethod)) || null;
+  const aiOffersBookingTimes = asBoolean(body.aiOffersBookingTimes);
+  const bookingDestination = stripHtml(asString(body.bookingDestination)) || null;
+  const urgentJobHandling = stripHtml(asString(body.urgentJobHandling)) || null;
+  const useExistingNumber = asBoolean(body.useExistingNumber);
+  const numberPortingNotes = stripHtml(asString(body.numberPortingNotes)) || null;
+  const logoPath = asString(body.logoPath) || null;
+  const websitePhotoPaths = asStringArray(body.websitePhotoPaths);
+  const websiteNotes = stripHtml(asString(body.websiteNotes)) || null;
+
+  const rawVerificationDocumentType = body.verificationDocumentType;
+  const verificationDocumentType = isVerificationDocumentType(rawVerificationDocumentType)
+    ? rawVerificationDocumentType
+    : null;
+  const verificationDocumentPath = asString(body.verificationDocumentPath) || null;
+  // Only ever stored for "other" — forced null for every other type,
+  // regardless of what the client sent, per spec.
+  const verificationDocumentOtherDescription =
+    verificationDocumentType === "other"
+      ? stripHtml(asString(body.verificationDocumentOtherDescription)) || null
+      : null;
+
+  const documentRequiresAddressProof = verificationDocumentType
+    ? requiresAddressProof(verificationDocumentType)
+    : false;
+  const rawAddressVerificationDocumentType = body.addressVerificationDocumentType;
+  // Only stored when actually required — never trust/store a client-sent
+  // value for a document type that doesn't need it.
+  const addressVerificationDocumentType =
+    documentRequiresAddressProof && isAddressVerificationDocumentType(rawAddressVerificationDocumentType)
+      ? rawAddressVerificationDocumentType
+      : null;
+  const addressVerificationDocumentPath = documentRequiresAddressProof
+    ? asString(body.addressVerificationDocumentPath) || null
+    : null;
 
   if (!businessName) {
     return NextResponse.json(
@@ -174,6 +261,107 @@ export async function POST(request: Request) {
     );
   }
 
+  if (isNewWizard) {
+    if (!abn) {
+      return NextResponse.json({ success: false, error: "Please enter your ABN." }, { status: 400, headers });
+    }
+    if (!businessAddress) {
+      return NextResponse.json(
+        { success: false, error: "Please enter your business address." },
+        { status: 400, headers },
+      );
+    }
+    if (!notificationMobile) {
+      return NextResponse.json(
+        { success: false, error: "Please enter a preferred notification mobile." },
+        { status: 400, headers },
+      );
+    }
+    if (!suburbsCovered) {
+      return NextResponse.json(
+        { success: false, error: "Please enter your service suburbs/area." },
+        { status: 400, headers },
+      );
+    }
+    if (!openingHours) {
+      return NextResponse.json(
+        { success: false, error: "Please enter your business opening hours." },
+        { status: 400, headers },
+      );
+    }
+    if (offersEmergencyService === null) {
+      return NextResponse.json(
+        { success: false, error: "Please let us know if you offer emergency/after-hours service." },
+        { status: 400, headers },
+      );
+    }
+    if (!bookingMethod) {
+      return NextResponse.json(
+        { success: false, error: "Please tell us how customers currently book jobs." },
+        { status: 400, headers },
+      );
+    }
+    if (aiOffersBookingTimes === null) {
+      return NextResponse.json(
+        { success: false, error: "Please let us know if the AI should offer appointment times." },
+        { status: 400, headers },
+      );
+    }
+    if (!bookingDestination) {
+      return NextResponse.json(
+        { success: false, error: "Please tell us where new bookings should go." },
+        { status: 400, headers },
+      );
+    }
+    if (!urgentJobHandling) {
+      return NextResponse.json(
+        { success: false, error: "Please tell us what should happen with urgent jobs." },
+        { status: 400, headers },
+      );
+    }
+    if (useExistingNumber === null) {
+      return NextResponse.json(
+        { success: false, error: "Please let us know whether to forward your existing number." },
+        { status: 400, headers },
+      );
+    }
+
+    // ── Business verification (mandatory: required to provision the phone
+    // number, never made optional for friction's sake) ────────────────────
+    if (!verificationDocumentType) {
+      return NextResponse.json(
+        { success: false, error: "Please select a verification document type." },
+        { status: 400, headers },
+      );
+    }
+    if (!verificationDocumentPath) {
+      return NextResponse.json(
+        { success: false, error: "Please upload your verification document." },
+        { status: 400, headers },
+      );
+    }
+    if (verificationDocumentType === "other" && !verificationDocumentOtherDescription) {
+      return NextResponse.json(
+        { success: false, error: "Please specify the document type." },
+        { status: 400, headers },
+      );
+    }
+    if (documentRequiresAddressProof) {
+      if (!addressVerificationDocumentType) {
+        return NextResponse.json(
+          { success: false, error: "Please select a proof-of-address document type." },
+          { status: 400, headers },
+        );
+      }
+      if (!addressVerificationDocumentPath) {
+        return NextResponse.json(
+          { success: false, error: "Please upload your proof-of-address document." },
+          { status: 400, headers },
+        );
+      }
+    }
+  }
+
   const tooLong =
     businessName.length > MAX_LENGTHS.businessName ||
     (abn?.length ?? 0) > MAX_LENGTHS.abn ||
@@ -184,7 +372,17 @@ export async function POST(request: Request) {
     (suburbsCovered?.length ?? 0) > MAX_LENGTHS.suburbsCovered ||
     (googleLink?.length ?? 0) > MAX_LENGTHS.googleLink ||
     (notes?.length ?? 0) > MAX_LENGTHS.notes ||
-    (referralSource?.length ?? 0) > MAX_LENGTHS.referralSource;
+    (referralSource?.length ?? 0) > MAX_LENGTHS.referralSource ||
+    (tradingName?.length ?? 0) > MAX_LENGTHS.tradingName ||
+    (existingWebsite?.length ?? 0) > MAX_LENGTHS.existingWebsite ||
+    (notificationMobile?.length ?? 0) > MAX_LENGTHS.notificationMobile ||
+    (openingHours?.length ?? 0) > MAX_LENGTHS.openingHours ||
+    (bookingMethod?.length ?? 0) > MAX_LENGTHS.bookingMethod ||
+    (bookingDestination?.length ?? 0) > MAX_LENGTHS.bookingDestination ||
+    (urgentJobHandling?.length ?? 0) > MAX_LENGTHS.urgentJobHandling ||
+    (numberPortingNotes?.length ?? 0) > MAX_LENGTHS.numberPortingNotes ||
+    (websiteNotes?.length ?? 0) > MAX_LENGTHS.websiteNotes ||
+    (verificationDocumentOtherDescription?.length ?? 0) > MAX_LENGTHS.verificationDocumentOtherDescription;
 
   if (tooLong) {
     return NextResponse.json(
@@ -212,6 +410,25 @@ export async function POST(request: Request) {
       referral_source: referralSource,
       plan,
       preview_request_id: previewRequestId,
+      trading_name: tradingName,
+      existing_website: existingWebsite,
+      notification_mobile: notificationMobile,
+      opening_hours: openingHours,
+      offers_emergency_service: offersEmergencyService,
+      booking_method: bookingMethod,
+      ai_offers_booking_times: aiOffersBookingTimes,
+      booking_destination: bookingDestination,
+      urgent_job_handling: urgentJobHandling,
+      use_existing_number: useExistingNumber,
+      number_porting_notes: numberPortingNotes,
+      logo_path: logoPath,
+      website_photo_paths: websitePhotoPaths,
+      website_notes: websiteNotes,
+      verification_document_type: verificationDocumentType,
+      verification_document_path: verificationDocumentPath,
+      verification_document_other_description: verificationDocumentOtherDescription,
+      address_verification_document_type: addressVerificationDocumentType,
+      address_verification_document_path: addressVerificationDocumentPath,
     })
     .select("*")
     .single();

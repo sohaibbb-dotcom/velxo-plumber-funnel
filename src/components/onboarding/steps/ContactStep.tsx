@@ -2,9 +2,8 @@ import { FormField } from "@/components/onboarding/FormField";
 import type { OnboardingFormData, UpdateField } from "@/components/onboarding/types";
 
 export const CONTACT_STEP_META = {
-  eyebrow: "Step 2 of 4",
-  title: "Who should we contact?",
-  description: "This is who Velxo will reach out to for setup and support.",
+  title: "Contact & notifications",
+  description: "Who operates the system, and where they should be notified.",
 };
 
 export function ContactStep({
@@ -41,6 +40,14 @@ export function ContactStep({
           placeholder="you@business.com.au"
         />
       </div>
+      <FormField
+        label="Preferred Notification Mobile"
+        type="tel"
+        required
+        value={formData.notificationMobile}
+        onChange={update("notificationMobile")}
+        placeholder="Where we'll alert you about missed calls and jobs"
+      />
     </>
   );
 }

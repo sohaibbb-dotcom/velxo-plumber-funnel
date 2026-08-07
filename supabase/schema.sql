@@ -629,3 +629,104 @@ alter table public.onboarding_submissions
   add column if not exists trial_ends_at timestamptz,
   add column if not exists payment_method_status text,
   add column if not exists referral_source text;
+
+-- ============================================================================
+-- Migration: onboarding activation redesign (Phase 4)
+--
+-- Backs the redesigned in-app /onboarding wizard (src/app/onboarding) —
+-- moves it from a generic "client form" to the fields actually needed to
+-- activate and provision the AI Receptionist (plus, for the Complete plan
+-- only, the website build). All additive and nullable: legacy
+-- onboarding.html submissions never send any of these, and several are only
+-- ever populated depending on plan or which verification document type was
+-- chosen. Required-ness for the new in-app wizard is enforced in
+-- src/app/api/onboarding-submissions/route.ts, not by a NOT NULL constraint
+-- here — a NOT NULL would also break every legacy onboarding.html insert.
+--
+-- ── AI-configuration fields (both plans; both need the receptionist) ──────
+-- notification_mobile: where the owner is alerted about missed calls/jobs —
+-- deliberately separate from business_phone, which may be the number being
+-- forwarded/replaced rather than a place to actually reach the owner.
+-- use_existing_number + number_porting_notes: whether to forward the
+-- existing business_phone instead of provisioning a new Velxo number.
+--
+-- ── Business verification (see verificationDocuments.ts) ──────────────────
+-- Two independent documents because one document alone doesn't always prove
+-- both "the business exists" and "it operates from this address" — see
+-- requiresAddressProof() in src/lib/onboarding/verificationDocuments.ts,
+-- the single source of truth for which primary document types need the
+-- second upload. verification_document_other_description is only ever
+-- populated when verification_document_type = 'other' — enforced at the API
+-- layer, kept as its own column rather than overloading `notes`.
+-- Paths point into the PRIVATE 'onboarding-uploads' Storage bucket below —
+-- never a public URL.
+--
+-- ── Website Setup fields (Complete plan only) ──────────────────────────────
+-- logo_path / website_photo_paths point into the same private bucket.
+-- website_notes is deliberately separate from `notes` (Teach Your AI's
+-- free-text field) — they answer different questions for different steps.
+--
+-- This file is NOT run automatically — apply manually via the Supabase SQL
+-- editor, same as the rest of this file.
+-- ============================================================================
+alter table public.onboarding_submissions
+  add column if not exists trading_name text,
+  add column if not exists existing_website text,
+  add column if not exists notification_mobile text,
+  add column if not exists opening_hours text,
+  add column if not exists offers_emergency_service boolean,
+  add column if not exists booking_method text,
+  add column if not exists ai_offers_booking_times boolean,
+  add column if not exists booking_destination text,
+  add column if not exists urgent_job_handling text,
+  add column if not exists use_existing_number boolean,
+  add column if not exists number_porting_notes text,
+  add column if not exists logo_path text,
+  add column if not exists website_photo_paths jsonb not null default '[]'::jsonb,
+  add column if not exists website_notes text,
+  add column if not exists verification_document_type text
+    check (verification_document_type in (
+      'abn_registration_asic_extract',
+      'business_licence',
+      'electricity_bill',
+      'gas_bill',
+      'water_bill',
+      'internet_nbn_bill',
+      'council_rates_notice',
+      'commercial_lease_agreement',
+      'bank_statement',
+      'other'
+    )),
+  add column if not exists verification_document_path text,
+  add column if not exists verification_document_other_description text,
+  add column if not exists address_verification_document_type text
+    check (address_verification_document_type in (
+      'electricity_bill',
+      'gas_bill',
+      'water_bill',
+      'internet_nbn_bill',
+      'council_rates_notice',
+      'commercial_lease_agreement',
+      'bank_statement'
+    )),
+  add column if not exists address_verification_document_path text;
+
+-- ============================================================================
+-- Storage: onboarding-uploads bucket
+--
+-- Holds business-verification documents, proof-of-address documents, and
+-- (Complete plan) logo/website-photo uploads. PRIVATE — public = false, and
+-- deliberately given NO RLS policies on storage.objects, so anon/
+-- authenticated roles get zero access (same "RLS on, zero policies" pattern
+-- already used for every table in this file). Only the server-only
+-- service-role client (src/lib/supabase/server.ts, used from
+-- src/lib/onboarding/documentUpload.ts) can read or write it. Storage paths
+-- are random UUIDs generated server-side, never derived from the uploaded
+-- filename or exposed as a public URL.
+--
+-- This file is NOT run automatically — apply manually via the Supabase SQL
+-- editor, same as the rest of this file.
+-- ============================================================================
+insert into storage.buckets (id, name, public)
+values ('onboarding-uploads', 'onboarding-uploads', false)
+on conflict (id) do nothing;

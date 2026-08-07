@@ -16,3 +16,9 @@ export const PLAN_LABELS: Record<Plan, string> = {
   ai_receptionist: "AI Receptionist",
   complete: "Velxo Complete",
 };
+
+/** Post-trial monthly price in AUD — must match the Stripe price configured for each plan. */
+export const PLAN_MONTHLY_PRICE_AUD: Record<Plan, number> = {
+  ai_receptionist: 297,
+  complete: 397,
+};
