@@ -1,3 +1,4 @@
+import { Check } from "lucide-react";
 import { FormField } from "@/components/onboarding/FormField";
 import { FileUpload } from "@/components/onboarding/FileUpload";
 import {
@@ -21,6 +22,10 @@ export function VerificationDocument({
 }) {
   const selectedType = formData.verificationDocumentType;
   const needsAddressProof = selectedType ? requiresAddressProof(selectedType) : false;
+  const verificationComplete =
+    !!formData.verificationDocumentPath &&
+    (selectedType !== "other" || !!formData.verificationDocumentOtherDescription) &&
+    (!needsAddressProof || !!formData.addressVerificationDocumentPath);
 
   const handleTypeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const next = e.target.value;
@@ -38,6 +43,15 @@ export function VerificationDocument({
 
   return (
     <div className="flex flex-col gap-4 rounded-2xl border border-zinc-200 bg-zinc-50/50 p-4">
+      <div>
+        <p className="text-sm font-semibold text-zinc-900">Business Verification</p>
+        <p className="mt-1.5 text-sm leading-relaxed text-zinc-500">
+          Australian telecommunications regulations require us to verify your business before we can
+          activate your dedicated AI Receptionist phone number. This usually takes less than 30
+          seconds.
+        </p>
+      </div>
+
       <p className="text-sm text-zinc-500">
         Most businesses only need to upload one document. If your chosen document doesn&apos;t verify
         your business address, we&apos;ll ask for one additional proof-of-address document.
@@ -95,13 +109,6 @@ export function VerificationDocument({
         }
       />
 
-      <p className="text-xs leading-relaxed text-zinc-400">
-        <span className="font-medium text-zinc-500">Why we need this — </span>
-        Australian telecommunications regulations require us to verify your business before
-        provisioning your dedicated AI Receptionist phone number. Your document is stored securely
-        and is used only for business verification.
-      </p>
-
       {needsAddressProof && (
         <div className="flex flex-col gap-4 border-t border-zinc-200 pt-4">
           <label className="flex flex-col gap-1.5 text-left">
@@ -149,6 +156,16 @@ export function VerificationDocument({
               }))
             }
           />
+        </div>
+      )}
+
+      {verificationComplete && (
+        <div className="flex items-start gap-2.5 rounded-xl border border-emerald-200 bg-emerald-50/50 px-3.5 py-3">
+          <Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" strokeWidth={3} />
+          <p className="text-sm leading-relaxed text-zinc-700">
+            <span className="font-medium">Business verification received.</span> Our onboarding team
+            will verify your documents before provisioning your dedicated AI Receptionist number.
+          </p>
         </div>
       )}
     </div>

@@ -2,6 +2,15 @@ import type { ChangeEvent } from "react";
 import type { VerificationDocumentType } from "@/lib/onboarding/verificationDocuments";
 import type { AddressVerificationDocumentType } from "@/lib/onboarding/verificationDocuments";
 
+export type HoursMode = "standard" | "custom" | "247";
+
+export type CustomHoursDay = {
+  day: "mon" | "tue" | "wed" | "thu" | "fri" | "sat" | "sun";
+  closed: boolean;
+  open: string;
+  close: string;
+};
+
 export type OnboardingFormData = {
   // ── Step 1: Verify Your Business ───────────────────────────────────────
   businessName: string;
@@ -23,15 +32,17 @@ export type OnboardingFormData = {
   businessEmail: string;
   notificationMobile: string;
 
-  // ── Step 3: Teach Your AI ───────────────────────────────────────────────
+  // ── Step 3: Help Us Personalise Your AI Receptionist ───────────────────
   services: string[];
   suburbsCovered: string;
+  // openingHours is the composed, human-readable string actually sent to
+  // the server — hoursMode/standardOpenTime/standardCloseTime/customHours
+  // are UI-only state that BusinessHoursPicker keeps it in sync with.
   openingHours: string;
-  offersEmergencyService: boolean | null;
-  bookingMethod: string;
-  aiOffersBookingTimes: boolean | null;
-  bookingDestination: string;
-  urgentJobHandling: string;
+  hoursMode: HoursMode;
+  standardOpenTime: string;
+  standardCloseTime: string;
+  customHours: CustomHoursDay[];
   useExistingNumber: boolean | null;
   numberPortingNotes: string;
   googleLink: string;

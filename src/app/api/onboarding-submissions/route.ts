@@ -55,9 +55,6 @@ const MAX_LENGTHS = {
   existingWebsite: 500,
   notificationMobile: 32,
   openingHours: 500,
-  bookingMethod: 500,
-  bookingDestination: 500,
-  urgentJobHandling: 500,
   numberPortingNotes: 1000,
   websiteNotes: 2000,
   verificationDocumentOtherDescription: 200,
@@ -93,11 +90,6 @@ type RequestBody = {
   existingWebsite?: unknown;
   notificationMobile?: unknown;
   openingHours?: unknown;
-  offersEmergencyService?: unknown;
-  bookingMethod?: unknown;
-  aiOffersBookingTimes?: unknown;
-  bookingDestination?: unknown;
-  urgentJobHandling?: unknown;
   useExistingNumber?: unknown;
   numberPortingNotes?: unknown;
   logoPath?: unknown;
@@ -199,11 +191,6 @@ export async function POST(request: Request) {
   const existingWebsite = asString(body.existingWebsite) || null;
   const notificationMobile = asString(body.notificationMobile) || null;
   const openingHours = stripHtml(asString(body.openingHours)) || null;
-  const offersEmergencyService = asBoolean(body.offersEmergencyService);
-  const bookingMethod = stripHtml(asString(body.bookingMethod)) || null;
-  const aiOffersBookingTimes = asBoolean(body.aiOffersBookingTimes);
-  const bookingDestination = stripHtml(asString(body.bookingDestination)) || null;
-  const urgentJobHandling = stripHtml(asString(body.urgentJobHandling)) || null;
   const useExistingNumber = asBoolean(body.useExistingNumber);
   const numberPortingNotes = stripHtml(asString(body.numberPortingNotes)) || null;
   const logoPath = asString(body.logoPath) || null;
@@ -289,36 +276,6 @@ export async function POST(request: Request) {
         { status: 400, headers },
       );
     }
-    if (offersEmergencyService === null) {
-      return NextResponse.json(
-        { success: false, error: "Please let us know if you offer emergency/after-hours service." },
-        { status: 400, headers },
-      );
-    }
-    if (!bookingMethod) {
-      return NextResponse.json(
-        { success: false, error: "Please tell us how customers currently book jobs." },
-        { status: 400, headers },
-      );
-    }
-    if (aiOffersBookingTimes === null) {
-      return NextResponse.json(
-        { success: false, error: "Please let us know if the AI should offer appointment times." },
-        { status: 400, headers },
-      );
-    }
-    if (!bookingDestination) {
-      return NextResponse.json(
-        { success: false, error: "Please tell us where new bookings should go." },
-        { status: 400, headers },
-      );
-    }
-    if (!urgentJobHandling) {
-      return NextResponse.json(
-        { success: false, error: "Please tell us what should happen with urgent jobs." },
-        { status: 400, headers },
-      );
-    }
     if (useExistingNumber === null) {
       return NextResponse.json(
         { success: false, error: "Please let us know whether to forward your existing number." },
@@ -377,9 +334,6 @@ export async function POST(request: Request) {
     (existingWebsite?.length ?? 0) > MAX_LENGTHS.existingWebsite ||
     (notificationMobile?.length ?? 0) > MAX_LENGTHS.notificationMobile ||
     (openingHours?.length ?? 0) > MAX_LENGTHS.openingHours ||
-    (bookingMethod?.length ?? 0) > MAX_LENGTHS.bookingMethod ||
-    (bookingDestination?.length ?? 0) > MAX_LENGTHS.bookingDestination ||
-    (urgentJobHandling?.length ?? 0) > MAX_LENGTHS.urgentJobHandling ||
     (numberPortingNotes?.length ?? 0) > MAX_LENGTHS.numberPortingNotes ||
     (websiteNotes?.length ?? 0) > MAX_LENGTHS.websiteNotes ||
     (verificationDocumentOtherDescription?.length ?? 0) > MAX_LENGTHS.verificationDocumentOtherDescription;
@@ -414,11 +368,6 @@ export async function POST(request: Request) {
       existing_website: existingWebsite,
       notification_mobile: notificationMobile,
       opening_hours: openingHours,
-      offers_emergency_service: offersEmergencyService,
-      booking_method: bookingMethod,
-      ai_offers_booking_times: aiOffersBookingTimes,
-      booking_destination: bookingDestination,
-      urgent_job_handling: urgentJobHandling,
       use_existing_number: useExistingNumber,
       number_porting_notes: numberPortingNotes,
       logo_path: logoPath,

@@ -1,8 +1,15 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { CheckCircle2 } from "lucide-react";
+import { PartyPopper, Check } from "lucide-react";
 import { buttonVariants } from "@/components/ui/Button";
 import { cn } from "@/lib/utils";
+
+const NEXT_STEPS = [
+  "Create your workspace",
+  "Configure your AI",
+  "Provision your phone number",
+  "Connect your account",
+];
 
 export const metadata: Metadata = {
   title: "Trial Signup Received — Velxo",
@@ -28,17 +35,36 @@ export default async function OnboardingSuccessPage({
   return (
     <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-white px-4 text-center">
       <span className="flex h-14 w-14 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
-        <CheckCircle2 className="h-7 w-7" />
+        <PartyPopper className="h-7 w-7" />
       </span>
       <h1 className="max-w-md text-2xl font-semibold tracking-tight text-balance text-zinc-900 sm:text-3xl">
-        Your signup has been received.
+        Welcome to Velxo.
       </h1>
       <p className="max-w-sm text-[15px] leading-relaxed text-zinc-500">
-        We&apos;re confirming your trial and preparing your setup. You&apos;ll
-        hear from us shortly.
+        Your AI Receptionist is now being prepared.
       </p>
+
+      <ul className="mt-2 flex flex-col gap-2 text-left">
+        {NEXT_STEPS.map((item) => (
+          <li key={item} className="flex items-center gap-2.5 text-sm font-medium text-zinc-700">
+            <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-blue-600 text-white">
+              <Check className="h-2.5 w-2.5" strokeWidth={4} />
+            </span>
+            {item}
+          </li>
+        ))}
+      </ul>
+
+      <p className="mt-2 max-w-sm text-[15px] leading-relaxed text-zinc-500">
+        We&apos;ll email you as soon as everything is ready.
+      </p>
+      <p className="max-w-sm text-sm leading-relaxed text-zinc-400">
+        Most AI Receptionists are fully prepared within one business day. Our onboarding team will
+        contact you if we need anything else.
+      </p>
+
       {sessionId && (
-        <p className="text-xs text-zinc-400">Reference: {sessionId}</p>
+        <p className="mt-2 text-xs text-zinc-400">Reference: {sessionId}</p>
       )}
       <Link href="/" className={cn(buttonVariants({ variant: "primary", size: "lg" }), "mt-2")}>
         Back to Velxo

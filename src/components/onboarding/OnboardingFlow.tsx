@@ -15,6 +15,8 @@ import { StepProgress } from "@/components/onboarding/StepProgress";
 import { ProductExplainer } from "@/components/onboarding/ProductExplainer";
 import { TrialReassurance } from "@/components/onboarding/TrialReassurance";
 import { WhatHappensNext } from "@/components/onboarding/WhatHappensNext";
+import { IntroTransition } from "@/components/onboarding/IntroTransition";
+import { PreparingAnimation } from "@/components/onboarding/PreparingAnimation";
 import { BusinessStep, BUSINESS_STEP_META } from "@/components/onboarding/steps/BusinessStep";
 import { ContactStep, CONTACT_STEP_META } from "@/components/onboarding/steps/ContactStep";
 import { AiSetupStep, AI_SETUP_STEP_META } from "@/components/onboarding/steps/AiSetupStep";
@@ -63,12 +65,19 @@ const emptyForm: OnboardingFormData = {
   notificationMobile: "",
   services: [],
   suburbsCovered: "",
-  openingHours: "",
-  offersEmergencyService: null,
-  bookingMethod: "",
-  aiOffersBookingTimes: null,
-  bookingDestination: "",
-  urgentJobHandling: "",
+  openingHours: "Mon–Fri 7:00 AM–5:00 PM",
+  hoursMode: "standard",
+  standardOpenTime: "07:00",
+  standardCloseTime: "17:00",
+  customHours: [
+    { day: "mon", closed: false, open: "07:00", close: "17:00" },
+    { day: "tue", closed: false, open: "07:00", close: "17:00" },
+    { day: "wed", closed: false, open: "07:00", close: "17:00" },
+    { day: "thu", closed: false, open: "07:00", close: "17:00" },
+    { day: "fri", closed: false, open: "07:00", close: "17:00" },
+    { day: "sat", closed: true, open: "07:00", close: "17:00" },
+    { day: "sun", closed: true, open: "07:00", close: "17:00" },
+  ],
   useExistingNumber: null,
   numberPortingNotes: "",
   googleLink: "",
@@ -110,11 +119,6 @@ async function submitOnboarding(
         services: data.services,
         suburbsCovered: data.suburbsCovered,
         openingHours: data.openingHours,
-        offersEmergencyService: data.offersEmergencyService,
-        bookingMethod: data.bookingMethod,
-        aiOffersBookingTimes: data.aiOffersBookingTimes,
-        bookingDestination: data.bookingDestination,
-        urgentJobHandling: data.urgentJobHandling,
         useExistingNumber: data.useExistingNumber,
         numberPortingNotes: data.numberPortingNotes,
         colourScheme: data.colourScheme,
@@ -174,7 +178,7 @@ export function OnboardingFlow({
   const FORM_STEPS = plan === "complete" ? COMPLETE_STEPS : AI_RECEPTIONIST_STEPS;
 
   const [formStepIndex, setFormStepIndex] = useState(0);
-  const [phase, setPhase] = useState<"form" | "loading" | "error">("form");
+  const [phase, setPhase] = useState<"intro" | "preparing" | "form" | "loading" | "error">("intro");
   const [formData, setFormData] = useState<OnboardingFormData>(emptyForm);
   const [errorMessage, setErrorMessage] = useState(GENERIC_ERROR);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -251,6 +255,10 @@ export function OnboardingFlow({
         </span>
       </header>
 
+      {phase === "intro" && <IntroTransition onStart={() => setPhase("preparing")} />}
+      {phase === "preparing" && <PreparingAnimation onDone={() => setPhase("form")} />}
+
+      {(phase === "form" || phase === "loading" || phase === "error") && (
       <main
         className={cn(
           "mx-auto flex w-full flex-1 flex-col gap-10 px-4 py-10 sm:px-6 lg:px-8 lg:py-14",
@@ -279,12 +287,15 @@ export function OnboardingFlow({
                   onSubmit={goNext}
                   onBack={goBack}
                   isFirstStep={formStepIndex === 0}
-                  submitLabel={isLastStep ? "Continue to Secure Checkout" : "Continue"}
+                  submitLabel={isLastStep ? "Start My 30-Day Free Trial" : "Continue"}
+                  submitCaption={isLastStep ? "No charge today. Cancel anytime during your trial." : undefined}
                 >
                   {currentFormStep === "business" && (
                     <BusinessStep formData={formData} update={update} setFormData={setFormData} />
                   )}
-                  {currentFormStep === "contact" && <ContactStep formData={formData} update={update} />}
+                  {currentFormStep === "contact" && (
+                    <ContactStep formData={formData} update={update} setFormData={setFormData} />
+                  )}
                   {currentFormStep === "aiSetup" && (
                     <AiSetupStep
                       formData={formData}
@@ -313,6 +324,7 @@ export function OnboardingFlow({
           </div>
         </div>
       </main>
+      )}
     </div>
   );
 }

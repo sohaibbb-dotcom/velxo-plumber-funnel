@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { FormField } from "@/components/onboarding/FormField";
 import type { OnboardingFormData, UpdateField } from "@/components/onboarding/types";
 
@@ -9,10 +10,21 @@ export const CONTACT_STEP_META = {
 export function ContactStep({
   formData,
   update,
+  setFormData,
 }: {
   formData: OnboardingFormData;
   update: UpdateField;
+  setFormData: (updater: (prev: OnboardingFormData) => OnboardingFormData) => void;
 }) {
+  const [sameAsBusinessPhone, setSameAsBusinessPhone] = useState(false);
+
+  const toggleSameAsBusinessPhone = (checked: boolean) => {
+    setSameAsBusinessPhone(checked);
+    if (checked) {
+      setFormData((prev) => ({ ...prev, notificationMobile: prev.businessPhone }));
+    }
+  };
+
   return (
     <>
       <FormField
@@ -28,7 +40,12 @@ export function ContactStep({
           type="tel"
           required
           value={formData.businessPhone}
-          onChange={update("businessPhone")}
+          onChange={(e) => {
+            update("businessPhone")(e);
+            if (sameAsBusinessPhone) {
+              setFormData((prev) => ({ ...prev, notificationMobile: e.target.value }));
+            }
+          }}
           placeholder="0400 000 000"
         />
         <FormField
@@ -44,10 +61,19 @@ export function ContactStep({
         label="Preferred Notification Mobile"
         type="tel"
         required
+        disabled={sameAsBusinessPhone}
         value={formData.notificationMobile}
         onChange={update("notificationMobile")}
         placeholder="Where we'll alert you about missed calls and jobs"
       />
+      <label className="-mt-2 flex items-center gap-2 text-sm text-zinc-500">
+        <input
+          type="checkbox"
+          checked={sameAsBusinessPhone}
+          onChange={(e) => toggleSameAsBusinessPhone(e.target.checked)}
+        />
+        Same as business phone
+      </label>
     </>
   );
 }

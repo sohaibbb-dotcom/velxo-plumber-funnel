@@ -50,13 +50,18 @@ export function BusinessStep({
           onChange={update("tradingName")}
           placeholder="If different from your legal name"
         />
-        <FormField
-          label="Existing Website"
-          optional
-          value={formData.existingWebsite}
-          onChange={update("existingWebsite")}
-          placeholder="https://..."
-        />
+        <div className="flex flex-col gap-1.5">
+          <FormField
+            label="Website"
+            optional
+            value={formData.existingWebsite}
+            onChange={update("existingWebsite")}
+            placeholder="https://..."
+          />
+          <p className="text-xs text-zinc-400">
+            We&apos;ll use this to learn about your business and prepare your AI Receptionist.
+          </p>
+        </div>
       </div>
 
       <VerificationDocument formData={formData} setFormData={setFormData} />

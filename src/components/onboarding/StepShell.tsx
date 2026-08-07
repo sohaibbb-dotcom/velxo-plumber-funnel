@@ -17,6 +17,7 @@ export function StepShell({
   onBack,
   isFirstStep,
   submitLabel = "Continue",
+  submitCaption,
   children,
 }: {
   eyebrow: string;
@@ -26,6 +27,7 @@ export function StepShell({
   onBack: () => void;
   isFirstStep: boolean;
   submitLabel?: string;
+  submitCaption?: string;
   children: ReactNode;
 }) {
   const handleSubmit = (e: FormEvent) => {
@@ -67,6 +69,9 @@ export function StepShell({
             {submitLabel}
           </button>
         </div>
+        {submitCaption && (
+          <p className="text-center text-xs text-zinc-400">{submitCaption}</p>
+        )}
       </form>
     </motion.div>
   );
