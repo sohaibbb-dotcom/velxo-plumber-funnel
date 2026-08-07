@@ -28,6 +28,7 @@ const GHL_LOCATION_ID = process.env.HIGHLEVEL_LOCATION_ID;
 const PIPELINE_NAME = "Velxo Clients";
 export const DEPOSIT_PAID_TAG = "deposit paid";
 export const DEPOSIT_VALUE_AUD = 500;
+export const TRIAL_STARTED_TAG = "trial started";
 
 function requireConfig(): { apiKey: string; locationId: string } {
   if (!GHL_API_KEY) throw new Error("Missing environment variable: HIGHLEVEL_API_KEY");
@@ -128,13 +129,15 @@ type GhlPipeline = { id: string; name: string; stages?: GhlPipelineStage[] };
 type GhlPipelinesResponse = { pipelines?: GhlPipeline[] };
 
 /**
- * The three sales-pipeline stages this app drives an opportunity through,
- * in funnel order. HighLevel's own `position` field on each stage (fetched
+ * The sales-pipeline stages this app drives an opportunity through, in
+ * funnel order. HighLevel's own `position` field on each stage (fetched
  * live, not hardcoded here) is the source of truth for ordering — this type
  * just constrains callers to stage names this codebase actually knows how
- * to target.
+ * to target. "Trial Started" sits between "Preview Viewed" and "Deposit
+ * Paid" — the new subscription-trial flow and the legacy one-off deposit
+ * flow are different products moving through the same pipeline.
  */
-export type OpportunityStageName = "New Lead" | "Preview Viewed" | "Deposit Paid";
+export type OpportunityStageName = "New Lead" | "Preview Viewed" | "Trial Started" | "Deposit Paid";
 
 let cachedPipeline: GhlPipeline | null = null;
 
