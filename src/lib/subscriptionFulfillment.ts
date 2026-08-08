@@ -1,7 +1,7 @@
 import "server-only";
 import Stripe from "stripe";
 import { supabaseServer } from "@/lib/supabase/server";
-import { addTag, upsertContact, moveOpportunityToStage, TRIAL_STARTED_TAG } from "@/lib/highlevel";
+import { addTag, upsertContact, moveOpportunityToStage, TRIAL_STARTED_TAG, AGENCY_PIPELINE_NAME } from "@/lib/highlevel";
 import { findSubmissionByPublicId, getStripeCustomerId } from "@/lib/depositFulfillment";
 
 /**
@@ -131,4 +131,20 @@ export async function processSubscriptionStarted(session: Stripe.Checkout.Sessio
     // already-successful HighLevel calls for no benefit.
     console.error(`Trial started for submission ${submission.id}, but recording ghl_contact_id/ghl_opportunity_id failed:`, ghlLinkError.message);
   }
+
+  // Step 8: push the SAME contact into the agency's internal ops pipeline
+  // too — a separate pipeline in the same GHL sub-account/location, used to
+  // trigger the already-built "New Trial" workflow (internal notification +
+  // provisioning task). Reuses contactId from step 6, so this never creates
+  // a second HighLevel contact. Runs for both plans identically. If this
+  // throws, steps 4-7 above have already durably succeeded — the webhook
+  // route still releases the idempotency lock and lets Stripe retry, which
+  // is safe here for the same reason step 7 is: moveOpportunityToStage
+  // never duplicates or regresses an opportunity.
+  await moveOpportunityToStage({
+    contactId,
+    targetStageName: "New Trial",
+    name: submission.business_name,
+    pipelineName: AGENCY_PIPELINE_NAME,
+  });
 }

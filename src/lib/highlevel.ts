@@ -26,6 +26,15 @@ const GHL_LOCATION_ID = process.env.HIGHLEVEL_LOCATION_ID;
 
 /** Business configuration, not secrets — deliberately not env vars. */
 const PIPELINE_NAME = "Velxo Clients";
+/**
+ * The agency's internal ops CRM pipeline — same GHL sub-account/location as
+ * PIPELINE_NAME above, just a different pipeline. Every successful trial
+ * (either plan) lands a "New Trial" opportunity here, which triggers an
+ * already-built HighLevel workflow (internal notification + provisioning
+ * task) — this codebase only ever advances the opportunity into that
+ * pipeline, it never touches the workflow itself.
+ */
+export const AGENCY_PIPELINE_NAME = "Velxo Customers";
 export const DEPOSIT_PAID_TAG = "deposit paid";
 export const DEPOSIT_VALUE_AUD = 500;
 export const TRIAL_STARTED_TAG = "trial started";
@@ -137,39 +146,47 @@ type GhlPipelinesResponse = { pipelines?: GhlPipeline[] };
  * Paid" — the new subscription-trial flow and the legacy one-off deposit
  * flow are different products moving through the same pipeline.
  */
-export type OpportunityStageName = "New Lead" | "Preview Viewed" | "Trial Started" | "Deposit Paid";
+export type OpportunityStageName =
+  | "New Lead"
+  | "Preview Viewed"
+  | "Trial Started"
+  | "Deposit Paid"
+  | "New Trial";
 
-let cachedPipeline: GhlPipeline | null = null;
+const pipelineCache = new Map<string, GhlPipeline>();
 
 /**
- * Resolves the "Velxo Clients" pipeline (with its full stage list) by name
- * rather than a hardcoded id, so this doesn't silently break if the
- * pipeline is ever recreated. Cached in-process for the life of the
+ * Resolves a pipeline (with its full stage list) by name rather than a
+ * hardcoded id, so this doesn't silently break if a pipeline is ever
+ * recreated. Defaults to PIPELINE_NAME so every existing caller is
+ * unaffected; pass AGENCY_PIPELINE_NAME to target the agency ops pipeline
+ * instead. Cached per pipeline name, in-process for the life of the
  * serverless instance — cheap enough to skip a persistent cache.
  */
-async function getPipeline(): Promise<GhlPipeline> {
-  if (cachedPipeline) return cachedPipeline;
+async function getPipeline(pipelineName: string = PIPELINE_NAME): Promise<GhlPipeline> {
+  const cached = pipelineCache.get(pipelineName);
+  if (cached) return cached;
   const { locationId } = requireConfig();
 
   const data = await ghlFetch<GhlPipelinesResponse>(
     `/opportunities/pipelines?locationId=${encodeURIComponent(locationId)}`,
   );
 
-  const pipeline = (data.pipelines ?? []).find((p) => p.name === PIPELINE_NAME);
+  const pipeline = (data.pipelines ?? []).find((p) => p.name === pipelineName);
   if (!pipeline) {
     throw new Error(
-      `HighLevel pipeline "${PIPELINE_NAME}" not found for this location. Check it exists and is named exactly "${PIPELINE_NAME}".`,
+      `HighLevel pipeline "${pipelineName}" not found for this location. Check it exists and is named exactly "${pipelineName}".`,
     );
   }
 
-  cachedPipeline = pipeline;
+  pipelineCache.set(pipelineName, pipeline);
   return pipeline;
 }
 
 function resolveStage(pipeline: GhlPipeline, stageName: OpportunityStageName): GhlPipelineStage {
   const stage = (pipeline.stages ?? []).find((s) => s.name === stageName);
   if (!stage) {
-    throw new Error(`HighLevel stage "${stageName}" not found in pipeline "${PIPELINE_NAME}".`);
+    throw new Error(`HighLevel stage "${stageName}" not found in pipeline "${pipeline.name}".`);
   }
   return stage;
 }
@@ -220,14 +237,17 @@ export async function moveOpportunityToStage({
   targetStageName,
   name,
   monetaryValue,
+  pipelineName = PIPELINE_NAME,
 }: {
   contactId: string;
   targetStageName: OpportunityStageName;
   name: string;
   monetaryValue?: number;
+  /** Defaults to the "Velxo Clients" pipeline; pass AGENCY_PIPELINE_NAME for the agency ops pipeline. */
+  pipelineName?: string;
 }): Promise<{ opportunityId: string; stageName: string; created: boolean }> {
   const { locationId } = requireConfig();
-  const pipeline = await getPipeline();
+  const pipeline = await getPipeline(pipelineName);
   const targetStage = resolveStage(pipeline, targetStageName);
 
   const existing = await findExistingOpportunity(contactId, pipeline.id);
