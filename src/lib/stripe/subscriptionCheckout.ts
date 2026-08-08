@@ -1,6 +1,6 @@
 import "server-only";
 import Stripe from "stripe";
-import type { Plan } from "@/lib/plans";
+import { isPlan, type Plan } from "@/lib/plans";
 import type { OnboardingSubmissionRow } from "@/lib/onboarding/types";
 
 /**
@@ -67,4 +67,30 @@ export async function createSubscriptionCheckoutSession({
   }
 
   return { url: session.url };
+}
+
+/**
+ * Resolves which plan a completed Checkout Session was for, straight from
+ * Stripe's own session metadata (set at creation time above) — not from a
+ * client-supplied query param, and not from onboarding_submissions, which
+ * the webhook only populates asynchronously and may not have written yet by
+ * the time the customer's browser redirects here. Returns null on any
+ * failure (missing/invalid session id, Stripe error, missing/invalid
+ * metadata) so callers can fall back to a safe default rather than throw on
+ * what is, at worst, a cosmetic lookup for success-page copy.
+ */
+export async function getPlanForCheckoutSession(sessionId: string): Promise<Plan | null> {
+  if (!STRIPE_SECRET_KEY || !sessionId) return null;
+
+  try {
+    const stripe = new Stripe(STRIPE_SECRET_KEY);
+    const session = await stripe.checkout.sessions.retrieve(sessionId);
+    return isPlan(session.metadata?.plan) ? session.metadata.plan : null;
+  } catch (err) {
+    console.error(
+      `Failed to retrieve plan for checkout session ${sessionId}:`,
+      err instanceof Error ? err.message : err,
+    );
+    return null;
+  }
 }
