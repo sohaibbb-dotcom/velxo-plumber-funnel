@@ -1,8 +1,24 @@
 import type { ChangeEvent } from "react";
 import type { VerificationDocumentType } from "@/lib/onboarding/verificationDocuments";
 import type { AddressVerificationDocumentType } from "@/lib/onboarding/verificationDocuments";
+import type { GooglePlaceCandidate } from "@/lib/google/types";
 
 export type HoursMode = "standard" | "custom" | "247";
+
+/**
+ * Client-side-only state for the automatic Google Business Profile lookup
+ * (GoogleBusinessProfileConnect) — never sent to the server as its own
+ * field. Only the resulting `googleLink` (and nothing else here) is part of
+ * the onboarding-submissions payload.
+ */
+export type GoogleReviewLinkStatus =
+  | "idle"
+  | "searching"
+  | "results"
+  | "confirmed"
+  | "not_found"
+  | "error"
+  | "skipped";
 
 export type CustomHoursDay = {
   day: "mon" | "tue" | "wed" | "thu" | "fri" | "sat" | "sun";
@@ -45,7 +61,14 @@ export type OnboardingFormData = {
   customHours: CustomHoursDay[];
   useExistingNumber: boolean | null;
   numberPortingNotes: string;
+  // Populated automatically once the user confirms a Google Business Profile
+  // match (see GoogleBusinessProfileConnect) — this is still the one field
+  // actually submitted to the server; the rest below are UI-only.
   googleLink: string;
+  googlePlaceId: string | null;
+  googleReviewStatus: GoogleReviewLinkStatus;
+  googleCandidates: GooglePlaceCandidate[];
+  googleSearchQuery: string;
   notes: string;
 
   // ── Step 4 (Complete only): Website Setup ──────────────────────────────

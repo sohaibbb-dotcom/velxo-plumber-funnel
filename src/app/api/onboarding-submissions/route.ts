@@ -292,17 +292,13 @@ export async function POST(request: Request) {
         { status: 400, headers },
       );
     }
-    // Required for both plans: the review-request automation needs a real
-    // destination to send customers to, or it has nothing to do. Scoped to
-    // isNewWizard only — legacy onboarding.html never collects this reliably
-    // and keeps its original optional behaviour.
-    if (!googleLink) {
-      return NextResponse.json(
-        { success: false, error: "Please enter your Google Business Profile / review link." },
-        { status: 400, headers },
-      );
-    }
-    if (!isValidHttpUrl(googleLink)) {
+    // Never required: populated automatically via the Google Business
+    // Profile lookup (GoogleBusinessProfileConnect) when the customer
+    // confirms a match, but a failed/skipped/ambiguous lookup must never
+    // block onboarding or trial start. If present, still defensively
+    // checked — our own resolver only ever produces a real http(s) URL, but
+    // this endpoint doesn't trust any client-sent value blindly.
+    if (googleLink && !isValidHttpUrl(googleLink)) {
       return NextResponse.json(
         { success: false, error: "Please enter a valid Google Business Profile / review link." },
         { status: 400, headers },
