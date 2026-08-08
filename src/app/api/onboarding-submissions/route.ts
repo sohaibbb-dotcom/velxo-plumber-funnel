@@ -123,6 +123,16 @@ function asBoolean(value: unknown): boolean | null {
   return typeof value === "boolean" ? value : null;
 }
 
+/** Google review automation needs a real, resolvable destination — http(s) only. */
+function isValidHttpUrl(value: string): boolean {
+  try {
+    const url = new URL(value);
+    return url.protocol === "http:" || url.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Resolves the preview_requests row this submission came from, if any —
  * the Velxo-owned id that carries Meta attribution across the domain hop
@@ -279,6 +289,22 @@ export async function POST(request: Request) {
     if (useExistingNumber === null) {
       return NextResponse.json(
         { success: false, error: "Please let us know whether to forward your existing number." },
+        { status: 400, headers },
+      );
+    }
+    // Required for both plans: the review-request automation needs a real
+    // destination to send customers to, or it has nothing to do. Scoped to
+    // isNewWizard only — legacy onboarding.html never collects this reliably
+    // and keeps its original optional behaviour.
+    if (!googleLink) {
+      return NextResponse.json(
+        { success: false, error: "Please enter your Google Business Profile / review link." },
+        { status: 400, headers },
+      );
+    }
+    if (!isValidHttpUrl(googleLink)) {
+      return NextResponse.json(
+        { success: false, error: "Please enter a valid Google Business Profile / review link." },
         { status: 400, headers },
       );
     }

@@ -48,13 +48,16 @@ export function AiSetupStep({
       )}
       <div className="flex flex-col gap-1.5">
         <FormField
-          label="Google Business Profile Link"
-          optional
+          label="Google Business Profile / Review Link *"
+          type="url"
+          required
           value={formData.googleLink}
           onChange={update("googleLink")}
-          placeholder="https://g.page/..."
+          placeholder="https://g.page/r/..."
         />
-        <p className="text-xs text-zinc-400">This helps us improve your AI&apos;s knowledge of your business.</p>
+        <p className="text-xs text-zinc-400">
+          We use this link when automatically asking your customers for a Google review.
+        </p>
       </div>
       <FormTextArea
         label="Anything else we should know?"
