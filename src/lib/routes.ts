@@ -31,3 +31,13 @@ export const COMPLETE_TRIAL_CTA_HREF = "/onboarding?plan=complete";
 export function buildOnboardingUrl(publicId: string): string {
   return `${COMPLETE_TRIAL_CTA_HREF}&preview=${encodeURIComponent(publicId)}`;
 }
+
+/**
+ * Stripe's permanent, shareable Customer Portal login link (copied from
+ * Settings -> Billing -> Customer portal in the Stripe Dashboard). Public by
+ * design — Stripe verifies the customer's own identity via an emailed
+ * one-time code before showing any billing data, so this is safe as
+ * NEXT_PUBLIC_. Empty string when unset — callers must check truthiness
+ * before rendering so a missing/empty value never renders a broken link.
+ */
+export const MANAGE_BILLING_HREF = process.env.NEXT_PUBLIC_STRIPE_PORTAL_URL ?? "";

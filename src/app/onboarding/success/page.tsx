@@ -3,6 +3,7 @@ import Link from "next/link";
 import { PartyPopper, Check } from "lucide-react";
 import { buttonVariants } from "@/components/ui/Button";
 import { cn } from "@/lib/utils";
+import { MANAGE_BILLING_HREF } from "@/lib/routes";
 
 const NEXT_STEPS = [
   "We configure your Velxo system",
@@ -81,6 +82,23 @@ export default async function OnboardingSuccessPage({
       <Link href="/" className={cn(buttonVariants({ variant: "primary", size: "lg" }), "mt-4")}>
         Back to Velxo
       </Link>
+
+      {MANAGE_BILLING_HREF && (
+        <div className="mt-8 border-t border-zinc-100 pt-6">
+          <a
+            href={MANAGE_BILLING_HREF}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-sm font-medium text-zinc-500 underline decoration-zinc-300 underline-offset-4 hover:text-zinc-700"
+          >
+            Manage Billing / Cancel Subscription
+          </a>
+          <p className="mt-1.5 text-xs text-zinc-400">
+            You can view invoices, update your payment method, or cancel any time before your trial ends — no charge
+            if you cancel during the free trial.
+          </p>
+        </div>
+      )}
     </div>
   );
 }
