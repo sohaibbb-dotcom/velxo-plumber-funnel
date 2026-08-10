@@ -31,9 +31,19 @@ function resolvePriceId(plan: Plan): string {
 export async function createSubscriptionCheckoutSession({
   submission,
   origin,
+  eligibleForTrial,
 }: {
   submission: OnboardingSubmissionRow;
   origin: string;
+  /**
+   * Decided server-side by the caller (src/lib/onboarding/trialEligibility.ts),
+   * never from the browser — the client has no way to influence this value.
+   * When false (a business identity that already has a prior
+   * trial_starts_at on record), trial_period_days is omitted entirely
+   * rather than set to 0, which Stripe's API doesn't accept: Checkout then
+   * charges the card immediately on completion, same UI, no trial.
+   */
+  eligibleForTrial: boolean;
 }): Promise<{ url: string }> {
   if (!STRIPE_SECRET_KEY) {
     throw new Error("Missing environment variable: STRIPE_SECRET_KEY");
@@ -49,7 +59,7 @@ export async function createSubscriptionCheckoutSession({
     mode: "subscription",
     line_items: [{ price: priceId, quantity: 1 }],
     subscription_data: {
-      trial_period_days: TRIAL_PERIOD_DAYS,
+      ...(eligibleForTrial ? { trial_period_days: TRIAL_PERIOD_DAYS } : {}),
       metadata: { onboarding_submission_id: submission.id, plan: submission.plan },
     },
     // The Stripe webhook (Phase 2) will look up this same submission by

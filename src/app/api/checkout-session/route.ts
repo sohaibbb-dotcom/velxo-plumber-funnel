@@ -2,6 +2,7 @@ import "server-only";
 import { NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabase/server";
 import { createSubscriptionCheckoutSession } from "@/lib/stripe/subscriptionCheckout";
+import { hasPriorTrial } from "@/lib/onboarding/trialEligibility";
 import type { OnboardingSubmissionRow } from "@/lib/onboarding/types";
 
 /**
@@ -59,9 +60,20 @@ export async function POST(request: Request) {
   }
 
   try {
+    // Server-side only — trial eligibility is never accepted from the
+    // browser. A prior trial for this business identity (matched on email,
+    // AU phone, or ABN) means this checkout still proceeds, just without
+    // trial_period_days — see hasPriorTrial and createSubscriptionCheckoutSession.
+    const eligibleForTrial = !(await hasPriorTrial({
+      businessEmail: submission.business_email,
+      businessPhone: submission.business_phone,
+      abn: submission.abn,
+    }));
+
     const { url } = await createSubscriptionCheckoutSession({
       submission,
       origin: new URL(request.url).origin,
+      eligibleForTrial,
     });
     return NextResponse.json({ success: true, url });
   } catch (err) {

@@ -730,3 +730,23 @@ alter table public.onboarding_submissions
 insert into storage.buckets (id, name, public)
 values ('onboarding-uploads', 'onboarding-uploads', false)
 on conflict (id) do nothing;
+
+-- ============================================================================
+-- Migration: repeat free-trial protection index
+--
+-- Speeds up hasPriorTrial's (src/lib/onboarding/trialEligibility.ts) lookup
+-- of prior trial history, which filters on trial_starts_at IS NOT NULL —
+-- the sole, webhook-confirmed proof a business identity already received a
+-- trial (never merely submitting onboarding or opening/abandoning
+-- Checkout). Partial index, since only rows past that point are ever
+-- queried. No new column, no uniqueness constraint: business_email/
+-- business_phone/abn are compared in application code after normalization
+-- (AU phone formats vary too much for a plain equality filter), so no index
+-- on those columns is needed for this feature.
+--
+-- This file is NOT run automatically — apply manually via the Supabase SQL
+-- editor, same as the rest of this file.
+-- ============================================================================
+create index if not exists onboarding_submissions_trial_started_idx
+  on public.onboarding_submissions (trial_starts_at)
+  where trial_starts_at is not null;
