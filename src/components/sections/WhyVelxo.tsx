@@ -73,7 +73,7 @@ export function WhyVelxo() {
           >
             <IconTile icon={Rocket} tint="bg-emerald-50 text-emerald-600" />
             <h3 className="mt-6 text-xl font-semibold tracking-tight text-zinc-900">
-              Live within 7 days.
+              Go live fast.
             </h3>
             <LaunchTimeline />
           </motion.div>
@@ -157,10 +157,10 @@ function IconTile({
 }
 
 const launchSteps = [
-  { day: "Day 1", title: "System Setup" },
-  { day: "Day 3", title: "Automation Setup" },
-  { day: "Day 5", title: "Testing" },
-  { day: "Day 7", title: "Go Live" },
+  { day: "Step 1", title: "System Setup" },
+  { day: "Step 2", title: "Automation Setup" },
+  { day: "Step 3", title: "Testing" },
+  { day: "Step 4", title: "Go Live" },
 ];
 
 function LaunchTimeline() {

@@ -179,10 +179,10 @@ export function Pricing() {
             <Rocket className="h-5 w-5" />
           </span>
           <div>
-            <h3 className="text-lg font-semibold text-zinc-900">Launch in 7 days</h3>
+            <h3 className="text-lg font-semibold text-zinc-900">Go live fast</h3>
             <p className="mt-1.5 text-[15px] leading-relaxed text-zinc-500">
-              Whichever package you start with, we&apos;ll configure
-              everything and have your system live within 7 days.
+              Most Velxo setups are ready within 1 business day once we have
+              everything we need.
             </p>
           </div>
         </motion.div>

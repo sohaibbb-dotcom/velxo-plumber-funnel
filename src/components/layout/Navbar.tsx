@@ -14,8 +14,8 @@ export function Navbar() {
   const [open, setOpen] = useState(false);
 
   return (
-    <header className="sticky top-0 z-50 border-b border-zinc-100 bg-white/80 backdrop-blur-md">
-      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6 lg:px-8">
+    <header className="sticky top-0 z-50 border-b border-zinc-200/80 bg-white/95 shadow-[0_1px_0_0_rgba(0,0,0,0.02)] backdrop-blur-md">
+      <div className="mx-auto flex h-[var(--nav-h)] max-w-6xl items-center justify-between px-4 sm:px-6 lg:px-8">
         <Link
           href="/"
           className="flex items-center gap-2 text-[15px] font-semibold tracking-tight text-zinc-900"

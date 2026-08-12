@@ -3,6 +3,14 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  /* Single source of truth for the sticky navbar's height (Navbar.tsx),
+     so hero spacing and anchor-scroll offsets can never drift out of sync
+     with it. */
+  --nav-h: 4rem;
+}
+
+html {
+  scroll-padding-top: calc(var(--nav-h) + 0.5rem);
 }
 
 @theme inline {
