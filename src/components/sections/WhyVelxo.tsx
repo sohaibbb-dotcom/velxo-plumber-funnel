@@ -3,6 +3,7 @@
 import { ComponentType } from "react";
 import { motion } from "framer-motion";
 import {
+  ArrowRight,
   CalendarCheck,
   CheckCircle2,
   LayoutDashboard,
@@ -75,7 +76,11 @@ export function WhyVelxo() {
             <h3 className="mt-6 text-xl font-semibold tracking-tight text-zinc-900">
               Go live fast.
             </h3>
-            <LaunchTimeline />
+            <p className="mt-3 text-[15px] leading-relaxed text-zinc-500">
+              Most Velxo setups are ready within 1 business day once we have
+              everything we need.
+            </p>
+            <SetupFlow />
           </motion.div>
 
           <motion.div
@@ -156,45 +161,27 @@ function IconTile({
   );
 }
 
-const launchSteps = [
-  { day: "Step 1", title: "System Setup" },
-  { day: "Step 2", title: "Automation Setup" },
-  { day: "Step 3", title: "Testing" },
-  { day: "Step 4", title: "Go Live" },
-];
+const setupStages = ["Setup", "Test", "Live"];
 
-function LaunchTimeline() {
+function SetupFlow() {
   return (
-    <div className="relative mt-6 flex flex-col gap-4 sm:flex-row sm:gap-2">
-      {launchSteps.map((step, i) => (
-        <motion.div
-          key={step.day}
-          initial={{ opacity: 0, y: 12 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ delay: 0.15 + i * 0.12, duration: 0.4, ease: EASE }}
-          className="flex flex-1 items-center gap-3 sm:flex-col sm:items-start sm:gap-0"
-        >
-          <div className="flex items-center gap-3 sm:w-full sm:flex-col sm:items-start sm:gap-2">
-            <span
-              className={cn(
-                "flex h-9 w-9 shrink-0 items-center justify-center rounded-full border text-xs font-semibold",
-                i === launchSteps.length - 1
-                  ? "border-emerald-300 bg-emerald-50 text-emerald-600"
-                  : "border-zinc-200 bg-zinc-50 text-zinc-500",
-              )}
-            >
-              {i + 1}
-            </span>
-            <div className="hidden h-px flex-1 bg-zinc-200 sm:mt-4 sm:block" />
-          </div>
-          <div>
-            <p className="text-[11px] font-semibold tracking-wide text-zinc-400 uppercase">
-              {step.day}
-            </p>
-            <p className="text-sm font-medium text-zinc-900">{step.title}</p>
-          </div>
-        </motion.div>
+    <div className="mt-6 flex flex-wrap items-center gap-2">
+      {setupStages.map((stage, i) => (
+        <div key={stage} className="flex items-center gap-2">
+          <span
+            className={cn(
+              "rounded-full border px-3.5 py-1.5 text-sm font-medium",
+              i === setupStages.length - 1
+                ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                : "border-zinc-200 bg-zinc-50 text-zinc-600",
+            )}
+          >
+            {stage}
+          </span>
+          {i < setupStages.length - 1 && (
+            <ArrowRight className="h-3.5 w-3.5 text-zinc-300" />
+          )}
+        </div>
       ))}
     </div>
   );
