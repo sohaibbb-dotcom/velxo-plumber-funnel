@@ -41,15 +41,41 @@ function PixelPageviewTracker() {
   return null;
 }
 
+// Any of these firing counts as "the visitor is actually here" and is
+// enough reason to pay the SDK's main-thread cost. scroll/pointerdown/
+// touchstart cover the overwhelming majority of real visits within the
+// first second or two; click and keydown are included for the rest.
+const INTERACTION_EVENTS = [
+  "pointerdown",
+  "touchstart",
+  "click",
+  "scroll",
+  "keydown",
+] as const;
+
+// Fallback so a genuinely passive session (no scroll/tap/click/key at all)
+// still eventually loads fbevents.js. Chosen at the short end of the
+// requested 8-10s window: real interaction almost always happens within
+// the first second or two of an actual visit, so this fallback is a
+// backstop, not the primary path, for the vast majority of sessions.
+// Keeping it as short as the requested range allows still comfortably
+// clears Lighthouse's own TBT-scored window (its lab run never scrolls or
+// clicks, so the fallback timer is the only path that ever fires during an
+// audit), while an 8s worst-case delay is negligible against Meta's
+// attribution windows (1-day view / 1-day-plus click), so it doesn't
+// meaningfully change what gets attributed for visitors who do stay.
+const FALLBACK_DELAY_MS = 8000;
+
 /**
- * Perf Phase 3B: the fbq stub, `fbq('init', ...)`, and the first
+ * Perf Phase 4A: the fbq stub, `fbq('init', ...)`, and the first
  * `fbq('track','PageView')` still run at the same early "afterInteractive"
  * timing as before (see the bootstrap Script below) — only the actual
- * fbevents.js payload (the measured ~232 KiB / ~300ms+ main-thread cost) is
- * deferred here. Every fbq(...) call made before this script finishes
- * loading is queued by Meta's own stub (`n.queue.push`) and replayed once
- * it's ready, so no event is lost — this only moves the SDK's own
- * execution cost out of the critical initial-loading window.
+ * fbevents.js payload (the measured ~232 KiB main-thread cost) is deferred
+ * here, now until the first real user interaction (or a fallback timer for
+ * visitors who never interact). Every fbq(...) call made before this
+ * script finishes loading is queued by Meta's own stub (`n.queue.push`)
+ * and replayed once it's ready, so no event is lost — this only moves the
+ * SDK's own execution cost later.
  */
 function DeferredFacebookSdk() {
   const scheduledRef = useRef(false);
@@ -58,33 +84,43 @@ function DeferredFacebookSdk() {
     if (scheduledRef.current) return;
     scheduledRef.current = true;
 
-    const inject = () => {
+    let fallbackTimer: ReturnType<typeof setTimeout> | undefined;
+
+    const removeListeners = () => {
+      INTERACTION_EVENTS.forEach((eventName) =>
+        window.removeEventListener(eventName, onInteraction),
+      );
+    };
+
+    const cleanup = () => {
+      removeListeners();
+      if (fallbackTimer !== undefined) {
+        clearTimeout(fallbackTimer);
+        fallbackTimer = undefined;
+      }
+    };
+
+    function inject() {
       if (fbEventsInjected) return;
       fbEventsInjected = true;
+      cleanup();
       const script = document.createElement("script");
       script.async = true;
       script.src = FBEVENTS_SRC;
       const firstScript = document.getElementsByTagName("script")[0];
       firstScript?.parentNode?.insertBefore(script, firstScript);
-    };
-
-    const scheduleIdleInject = () => {
-      if (typeof window.requestIdleCallback === "function") {
-        window.requestIdleCallback(inject, { timeout: 4000 });
-      } else {
-        // Safari (and any other browser without requestIdleCallback)
-        // fallback: a fixed short delay after load instead of idle time.
-        setTimeout(inject, 2000);
-      }
-    };
-
-    if (document.readyState === "complete") {
-      scheduleIdleInject();
-      return;
     }
 
-    window.addEventListener("load", scheduleIdleInject, { once: true });
-    return () => window.removeEventListener("load", scheduleIdleInject);
+    function onInteraction() {
+      inject();
+    }
+
+    INTERACTION_EVENTS.forEach((eventName) =>
+      window.addEventListener(eventName, onInteraction, { passive: true }),
+    );
+    fallbackTimer = setTimeout(inject, FALLBACK_DELAY_MS);
+
+    return cleanup;
   }, []);
 
   return null;
