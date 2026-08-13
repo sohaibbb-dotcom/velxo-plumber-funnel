@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useEffect, useRef } from "react";
+import ReactDOM from "react-dom";
 import Script from "next/script";
 import { usePathname, useSearchParams } from "next/navigation";
 import { META_PIXEL_ID, trackMetaPixelEvent } from "@/lib/metaPixel";
@@ -35,6 +36,11 @@ function PixelPageviewTracker() {
 
 /** Official Meta Pixel base code, rendered once in the root layout. */
 export function MetaPixel() {
+  // Perf Phase 1: warm the connection to the pixel's domain only — this does
+  // not fetch, execute, or change when/how fbevents.js loads or fires; the
+  // Script tag below still owns all of that on its existing strategy.
+  ReactDOM.preconnect("https://connect.facebook.net");
+
   return (
     <>
       <Script id="meta-pixel-base" strategy="afterInteractive">
