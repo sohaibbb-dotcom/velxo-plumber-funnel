@@ -6,6 +6,13 @@ import Script from "next/script";
 import { usePathname, useSearchParams } from "next/navigation";
 import { META_PIXEL_ID, trackMetaPixelEvent } from "@/lib/metaPixel";
 
+const FBEVENTS_SRC = "https://connect.facebook.net/en_US/fbevents.js";
+
+// Module-scoped (not component-scoped) so it survives even a dev-only
+// Strict Mode mount/unmount/remount cycle — the actual fbevents.js <script>
+// tag must only ever be inserted once per page session.
+let fbEventsInjected = false;
+
 /**
  * Fires PageView on every *client-side* route change after the first load.
  *
@@ -34,6 +41,55 @@ function PixelPageviewTracker() {
   return null;
 }
 
+/**
+ * Perf Phase 3B: the fbq stub, `fbq('init', ...)`, and the first
+ * `fbq('track','PageView')` still run at the same early "afterInteractive"
+ * timing as before (see the bootstrap Script below) — only the actual
+ * fbevents.js payload (the measured ~232 KiB / ~300ms+ main-thread cost) is
+ * deferred here. Every fbq(...) call made before this script finishes
+ * loading is queued by Meta's own stub (`n.queue.push`) and replayed once
+ * it's ready, so no event is lost — this only moves the SDK's own
+ * execution cost out of the critical initial-loading window.
+ */
+function DeferredFacebookSdk() {
+  const scheduledRef = useRef(false);
+
+  useEffect(() => {
+    if (scheduledRef.current) return;
+    scheduledRef.current = true;
+
+    const inject = () => {
+      if (fbEventsInjected) return;
+      fbEventsInjected = true;
+      const script = document.createElement("script");
+      script.async = true;
+      script.src = FBEVENTS_SRC;
+      const firstScript = document.getElementsByTagName("script")[0];
+      firstScript?.parentNode?.insertBefore(script, firstScript);
+    };
+
+    const scheduleIdleInject = () => {
+      if (typeof window.requestIdleCallback === "function") {
+        window.requestIdleCallback(inject, { timeout: 4000 });
+      } else {
+        // Safari (and any other browser without requestIdleCallback)
+        // fallback: a fixed short delay after load instead of idle time.
+        setTimeout(inject, 2000);
+      }
+    };
+
+    if (document.readyState === "complete") {
+      scheduleIdleInject();
+      return;
+    }
+
+    window.addEventListener("load", scheduleIdleInject, { once: true });
+    return () => window.removeEventListener("load", scheduleIdleInject);
+  }, []);
+
+  return null;
+}
+
 /** Official Meta Pixel base code, rendered once in the root layout. */
 export function MetaPixel() {
   // Perf Phase 1: warm the connection to the pixel's domain only — this does
@@ -49,9 +105,7 @@ export function MetaPixel() {
           {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
           n.callMethod.apply(n,arguments):n.queue.push(arguments)};
           if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
-          n.queue=[];t=b.createElement(e);t.async=!0;
-          t.src=v;s=b.getElementsByTagName(e)[0];
-          s.parentNode.insertBefore(t,s)}(window, document,'script',
+          n.queue=[]}(window, document,'script',
           'https://connect.facebook.net/en_US/fbevents.js');
           fbq('init', '${META_PIXEL_ID}');
           fbq('track', 'PageView');
@@ -70,6 +124,7 @@ export function MetaPixel() {
       <Suspense fallback={null}>
         <PixelPageviewTracker />
       </Suspense>
+      <DeferredFacebookSdk />
     </>
   );
 }
