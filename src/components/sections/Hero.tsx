@@ -42,20 +42,23 @@ export function Hero() {
           </Badge>
         </motion.div>
 
-        <motion.h1
-          initial="hidden"
-          animate="visible"
-          custom={1}
-          variants={fadeUp}
-          className="text-4xl font-semibold tracking-tight text-balance text-zinc-900 sm:text-5xl md:text-6xl"
-        >
+        {/*
+          Not a motion.h1: this is the LCP element. Framer Motion's
+          initial="hidden" (and even a CSS entrance animation starting from
+          opacity:0) bakes a transparent initial state into the SSR HTML,
+          which keeps this element ineligible for LCP paint until that state
+          resolves. It renders in its final visual state with no animation
+          so it's paintable immediately, with no hydration or CSS-animation
+          dependency.
+        */}
+        <h1 className="text-4xl font-semibold tracking-tight text-balance text-zinc-900 sm:text-5xl md:text-6xl">
           Stop Losing Jobs
           <br />
           While You&apos;re{" "}
           <span className="bg-gradient-to-r from-blue-600 to-sky-500 bg-clip-text text-transparent">
             On The Tools
           </span>
-        </motion.h1>
+        </h1>
 
         <motion.p
           initial="hidden"
