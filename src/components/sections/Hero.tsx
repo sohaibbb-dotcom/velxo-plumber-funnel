@@ -20,7 +20,7 @@ const fadeUp: Variants = {
 
 export function Hero() {
   return (
-    <section className="relative overflow-hidden bg-white pt-[calc(var(--nav-h)+1.25rem)] pb-24 sm:pt-[calc(var(--nav-h)+2.5rem)] sm:pb-32 lg:pt-[calc(var(--nav-h)+3.5rem)]">
+    <section className="relative overflow-hidden bg-white pt-[calc(var(--nav-h)+0.5rem)] pb-24 sm:pt-[calc(var(--nav-h)+2.5rem)] sm:pb-32 lg:pt-[calc(var(--nav-h)+3.5rem)]">
       <div
         aria-hidden
         className="pointer-events-none absolute inset-x-0 -top-40 -z-10 flex justify-center"
@@ -34,7 +34,7 @@ export function Hero() {
           animate="visible"
           custom={0}
           variants={fadeUp}
-          className="mb-6 flex justify-center"
+          className="mb-4 flex justify-center sm:mb-6"
         >
           <Badge>
             <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
@@ -65,7 +65,7 @@ export function Hero() {
           animate="visible"
           custom={2}
           variants={fadeUp}
-          className="mx-auto mt-6 max-w-xl text-base leading-relaxed text-zinc-600 sm:text-lg"
+          className="mx-auto mt-4 max-w-xl text-base leading-relaxed text-zinc-600 sm:mt-6 sm:text-lg"
         >
           Velxo&apos;s AI Receptionist responds to missed calls, talks to
           customers, and books jobs automatically.
@@ -76,7 +76,7 @@ export function Hero() {
           animate="visible"
           custom={3}
           variants={fadeUp}
-          className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row"
+          className="mt-6 flex flex-col items-center justify-center gap-3 sm:mt-8 sm:flex-row"
         >
           <a
             href={TRIAL_CTA_HREF}
@@ -96,7 +96,7 @@ export function Hero() {
           animate="visible"
           custom={4}
           variants={fadeUp}
-          className="mt-4 text-xs font-medium text-zinc-400"
+          className="mt-3 text-xs font-medium text-zinc-400 sm:mt-4"
         >
           30 days free · Then A$297/month · No charge today · Cancel anytime
           before your trial ends
@@ -107,7 +107,7 @@ export function Hero() {
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.7, delay: 0.5, ease: EASE }}
-        className="relative mx-auto mt-16 max-w-6xl px-4 sm:mt-20 sm:px-6 lg:px-8"
+        className="relative mx-auto mt-8 max-w-6xl px-4 sm:mt-20 sm:px-6 lg:px-8"
       >
         <HeroProductDemo />
       </motion.div>
