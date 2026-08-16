@@ -52,11 +52,11 @@ export function BelowFold() {
   return (
     <>
       <Capabilities />
+      <Calculator />
       <CompleteUpsell />
       <Problem />
       <Demo />
       <Comparison />
-      <Calculator />
       <WhyVelxo />
       <Pricing />
       <Showcase />
