@@ -71,7 +71,7 @@ export function BusinessHoursPicker({
 
   return (
     <div className="flex flex-col gap-3 text-left">
-      <span className="text-sm font-medium text-zinc-700">Business Hours</span>
+      <span className="text-sm font-medium text-white/75">Business Hours</span>
 
       <div className="flex flex-wrap gap-2.5">
         {(Object.keys(MODE_LABELS) as HoursMode[]).map((mode) => {
@@ -82,8 +82,8 @@ export function BusinessHoursPicker({
               className={cn(
                 "flex h-10 min-w-[140px] flex-1 cursor-pointer items-center justify-center rounded-xl border px-3 text-sm font-medium transition-colors",
                 selected
-                  ? "border-blue-500 bg-blue-50/50 text-zinc-900"
-                  : "border-zinc-200 bg-white text-zinc-600 hover:border-blue-300 hover:bg-blue-50/30",
+                  ? "border-violet-400/60 bg-violet-500/10 text-white"
+                  : "border-white/10 bg-white/[0.03] text-white/55 hover:border-violet-400/30 hover:bg-white/[0.05]",
               )}
             >
               <input
@@ -102,36 +102,37 @@ export function BusinessHoursPicker({
       {formData.hoursMode === "standard" && (
         <div className="grid grid-cols-2 gap-4">
           <label className="flex flex-col gap-1.5">
-            <span className="text-xs font-medium text-zinc-500">Open</span>
+            <span className="text-xs font-medium text-white/50">Open</span>
             <input
               type="time"
               value={formData.standardOpenTime}
               onChange={(e) => applyHours({ standardOpenTime: e.target.value })}
-              className="h-11 rounded-xl border border-zinc-200 bg-white px-3.5 text-sm text-zinc-900 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15"
+              className="h-11 rounded-xl border border-white/10 bg-white/[0.04] px-3.5 text-[15px] text-white outline-none transition-colors [color-scheme:dark] focus:border-violet-400/60 focus:ring-2 focus:ring-violet-400/20"
             />
           </label>
           <label className="flex flex-col gap-1.5">
-            <span className="text-xs font-medium text-zinc-500">Close</span>
+            <span className="text-xs font-medium text-white/50">Close</span>
             <input
               type="time"
               value={formData.standardCloseTime}
               onChange={(e) => applyHours({ standardCloseTime: e.target.value })}
-              className="h-11 rounded-xl border border-zinc-200 bg-white px-3.5 text-sm text-zinc-900 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15"
+              className="h-11 rounded-xl border border-white/10 bg-white/[0.04] px-3.5 text-[15px] text-white outline-none transition-colors [color-scheme:dark] focus:border-violet-400/60 focus:ring-2 focus:ring-violet-400/20"
             />
           </label>
         </div>
       )}
 
       {formData.hoursMode === "custom" && (
-        <div className="flex flex-col gap-2.5 rounded-2xl border border-zinc-200 bg-zinc-50/50 p-3.5">
+        <div className="flex flex-col gap-2.5 rounded-2xl border border-white/10 bg-white/[0.03] p-3.5">
           {formData.customHours.map((day, i) => (
             <div key={day.day} className="flex flex-wrap items-center gap-2.5">
-              <span className="w-9 shrink-0 text-xs font-medium text-zinc-600">{DAY_LABELS[day.day]}</span>
-              <label className="flex shrink-0 items-center gap-1.5 text-xs text-zinc-500">
+              <span className="w-9 shrink-0 text-xs font-medium text-white/60">{DAY_LABELS[day.day]}</span>
+              <label className="flex shrink-0 items-center gap-1.5 text-xs text-white/50">
                 <input
                   type="checkbox"
                   checked={!day.closed}
                   onChange={(e) => updateCustomDay(i, { closed: !e.target.checked })}
+                  className="accent-violet-500"
                 />
                 Open
               </label>
@@ -141,14 +142,14 @@ export function BusinessHoursPicker({
                     type="time"
                     value={day.open}
                     onChange={(e) => updateCustomDay(i, { open: e.target.value })}
-                    className="h-9 flex-1 rounded-lg border border-zinc-200 bg-white px-2 text-sm text-zinc-900 outline-none focus:border-blue-500"
+                    className="h-9 flex-1 rounded-lg border border-white/10 bg-white/[0.04] px-2 text-sm text-white outline-none [color-scheme:dark] focus:border-violet-400/60"
                   />
-                  <span className="text-xs text-zinc-400">to</span>
+                  <span className="text-xs text-white/35">to</span>
                   <input
                     type="time"
                     value={day.close}
                     onChange={(e) => updateCustomDay(i, { close: e.target.value })}
-                    className="h-9 flex-1 rounded-lg border border-zinc-200 bg-white px-2 text-sm text-zinc-900 outline-none focus:border-blue-500"
+                    className="h-9 flex-1 rounded-lg border border-white/10 bg-white/[0.04] px-2 text-sm text-white outline-none [color-scheme:dark] focus:border-violet-400/60"
                   />
                 </div>
               )}

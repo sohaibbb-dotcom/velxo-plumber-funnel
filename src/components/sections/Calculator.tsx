@@ -1,14 +1,15 @@
 "use client";
 
-import { ComponentType, useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { motion } from "framer-motion";
-import { Briefcase, Info, Sparkles, TrendingUp } from "lucide-react";
+import { ArrowRight, Info } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { TRIAL_CTA_HREF } from "@/lib/routes";
 
 const EASE = [0.16, 1, 0.3, 1] as const;
 const WEEKS_PER_MONTH = 4.33;
 
-const formatCalls = (n: number) => `${Math.round(n)} calls/week`;
+const formatCalls = (n: number) => `${Math.round(n)}/week`;
 const formatJobValue = (n: number) => `$${Math.round(n).toLocaleString()}`;
 const formatPercent = (n: number) => `${Math.round(n)}%`;
 const formatJobs = (n: number) => `${Math.round(n).toLocaleString()} jobs`;
@@ -24,8 +25,15 @@ export function Calculator() {
   const revenuePerYear = revenuePerMonth * 12;
 
   return (
-    <section id="calculator" className="bg-white py-24 sm:py-32">
-      <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
+    <section id="calculator" className="relative scroll-mt-20 bg-zinc-950 py-14 sm:py-28">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 top-0 flex justify-center"
+      >
+        <div className="h-[360px] w-[640px] rounded-full bg-gradient-to-br from-violet-600/15 via-blue-600/10 to-transparent blur-3xl" />
+      </div>
+
+      <div className="relative mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -33,33 +41,28 @@ export function Calculator() {
           transition={{ duration: 0.6, ease: EASE }}
           className="mx-auto max-w-2xl text-center"
         >
-          <p className="text-xs font-semibold tracking-widest text-blue-600 uppercase">
-            Cost Calculator
+          <p className="text-xs font-semibold tracking-widest text-violet-300 uppercase">
+            Make It Personal
           </p>
-          <h2 className="mt-3 text-3xl font-semibold tracking-tight text-balance text-zinc-900 sm:text-4xl md:text-5xl">
+          <h2 className="mt-3 text-3xl font-semibold tracking-tight text-balance text-white sm:text-4xl md:text-5xl">
             How much are missed calls costing your business?
           </h2>
-          <p className="mx-auto mt-4 max-w-md text-base text-zinc-500 sm:text-lg">
-            Move the sliders to see what missed calls are really costing you.
+          <p className="mx-auto mt-3 max-w-md text-base text-white/50 sm:text-lg">
+            Move the sliders — this is based on your numbers, not ours.
           </p>
         </motion.div>
 
         <motion.div
-          initial={{ opacity: 0, y: 30 }}
+          initial={{ opacity: 0, y: 24 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, amount: 0.2 }}
-          transition={{ duration: 0.7, ease: EASE }}
-          className="relative mx-auto mt-16 max-w-4xl overflow-hidden rounded-3xl border border-zinc-200 bg-zinc-900 p-6 shadow-2xl shadow-zinc-900/10 sm:p-10"
+          transition={{ duration: 0.6, ease: EASE }}
+          className="mx-auto mt-10 max-w-4xl overflow-hidden rounded-3xl border border-white/10 bg-white/[0.04] backdrop-blur-xl sm:mt-12"
         >
-          <div
-            aria-hidden
-            className="pointer-events-none absolute -top-24 left-1/2 h-64 w-[520px] -translate-x-1/2 rounded-full bg-blue-600/20 blur-3xl"
-          />
-
-          <div className="relative grid gap-10 lg:grid-cols-[1.1fr_1fr] lg:gap-14">
-            <div className="flex flex-col gap-9">
+          <div className="grid lg:grid-cols-[1.05fr_1fr]">
+            <div className="flex flex-col gap-8 border-white/[0.08] p-6 sm:p-8 lg:border-r">
               <SliderField
-                label="How many calls do you miss each week?"
+                label="Calls you miss each week"
                 value={missedCalls}
                 onChange={setMissedCalls}
                 min={0}
@@ -70,7 +73,7 @@ export function Calculator() {
                 maxLabel="30"
               />
               <SliderField
-                label="Average value of one plumbing job"
+                label="Average value of one job"
                 value={jobValue}
                 onChange={setJobValue}
                 min={150}
@@ -81,7 +84,7 @@ export function Calculator() {
                 maxLabel="$2,000"
               />
               <SliderField
-                label="How many missed callers would have become customers?"
+                label="Missed callers who'd have booked"
                 value={conversion}
                 onChange={setConversion}
                 min={10}
@@ -93,27 +96,38 @@ export function Calculator() {
               />
             </div>
 
-            <div className="flex flex-col gap-4">
-              <ResultTile
-                label="Estimated missed jobs / month"
-                value={missedJobsPerMonth}
-                formatter={formatJobs}
-                icon={Briefcase}
-              />
-              <ResultTile
-                label="Estimated potential revenue / month"
-                value={revenuePerMonth}
-                formatter={formatCurrency}
-                icon={TrendingUp}
-              />
-              <ResultTile
-                label="Estimated potential revenue / year"
-                value={revenuePerYear}
-                formatter={formatCurrency}
-                icon={Sparkles}
-                emphasized
-              />
+            {/* The result is the payoff: one dominant emerald figure, two
+                supporting numbers beneath it — not three equally-weighted
+                tiles competing for attention. */}
+            <div className="flex flex-col justify-center bg-white/[0.02] p-6 sm:p-8">
+              <p className="text-[11px] font-semibold tracking-widest text-white/40 uppercase">
+                Estimated revenue lost / year
+              </p>
+              <p className="mt-2 text-4xl font-semibold tabular-nums text-emerald-400 sm:text-5xl">
+                <AnimatedNumber value={revenuePerYear} formatter={formatCurrency} />
+              </p>
+
+              <div className="mt-6 flex flex-col gap-3 border-t border-white/[0.08] pt-6">
+                <ResultRow
+                  label="Missed jobs / month"
+                  value={missedJobsPerMonth}
+                  formatter={formatJobs}
+                />
+                <ResultRow
+                  label="Revenue lost / month"
+                  value={revenuePerMonth}
+                  formatter={formatCurrency}
+                />
+              </div>
             </div>
+          </div>
+
+          <div className="flex items-start gap-2.5 border-t border-white/[0.08] px-6 py-4 sm:px-8">
+            <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-white/30" />
+            <p className="text-[12px] leading-relaxed text-white/40">
+              An estimate based on the numbers above — not a guarantee. Actual
+              results depend on your business, enquiry quality and close rate.
+            </p>
           </div>
         </motion.div>
 
@@ -122,26 +136,19 @@ export function Calculator() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, amount: 0.6 }}
           transition={{ duration: 0.5, delay: 0.1, ease: EASE }}
-          className="mx-auto mt-6 flex max-w-4xl items-start gap-2.5 rounded-2xl border border-zinc-200 bg-zinc-50 px-5 py-4"
+          className="mx-auto mt-6 flex max-w-4xl flex-col items-center gap-4 rounded-2xl border border-white/10 bg-white/[0.04] px-6 py-6 text-center sm:flex-row sm:justify-between sm:px-8 sm:text-left"
         >
-          <Info className="mt-0.5 h-4 w-4 shrink-0 text-zinc-400" />
-          <p className="text-[13px] leading-relaxed text-zinc-500">
-            This is only an estimate — actual results depend on your business,
-            enquiry quality and conversion rate.
+          <p className="text-[15px] font-medium text-white/80">
+            If recovering even part of this matters, Velxo is free to try for
+            30 days.
           </p>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, amount: 0.6 }}
-          transition={{ duration: 0.5, delay: 0.18, ease: EASE }}
-          className="mx-auto mt-4 max-w-4xl rounded-2xl bg-gradient-to-br from-blue-600 to-blue-700 px-6 py-6 text-center shadow-lg shadow-blue-600/20 sm:px-10 sm:py-7"
-        >
-          <p className="text-base font-semibold text-balance text-white sm:text-lg">
-            Recovering just one extra plumbing job each month could often cover
-            the cost of Velxo.
-          </p>
+          <a
+            href={TRIAL_CTA_HREF}
+            className="group inline-flex w-full shrink-0 items-center justify-center gap-2 rounded-full bg-gradient-to-r from-violet-600 to-blue-600 px-6 py-3 text-sm font-semibold text-white shadow-md shadow-violet-950/30 transition-all duration-200 hover:from-violet-500 hover:to-blue-500 sm:w-auto"
+          >
+            Start My 30-Day Free Trial
+            <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5" />
+          </a>
         </motion.div>
       </div>
     </section>
@@ -175,7 +182,7 @@ function SliderField({
   return (
     <div>
       <div className="flex items-center justify-between gap-3">
-        <label htmlFor={inputId} className="text-sm font-medium text-white/80">
+        <label htmlFor={inputId} className="text-sm font-medium text-white/70">
           {label}
         </label>
         <span className="shrink-0 rounded-full bg-white/10 px-2.5 py-1 text-xs font-semibold tabular-nums text-white">
@@ -193,18 +200,18 @@ function SliderField({
         aria-valuetext={format(value)}
         onChange={(e) => onChange(Number(e.target.value))}
         style={{
-          background: `linear-gradient(to right, #3b82f6 ${pct}%, rgba(255,255,255,0.12) ${pct}%)`,
+          background: `linear-gradient(to right, #8b5cf6 ${pct}%, rgba(255,255,255,0.12) ${pct}%)`,
         }}
         className={cn(
           "mt-4 h-1.5 w-full cursor-pointer appearance-none rounded-full",
-          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-900",
-          "[&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:appearance-none",
-          "[&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-blue-500",
-          "[&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:shadow-md [&::-webkit-slider-thumb]:shadow-black/20",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950",
+          "[&::-webkit-slider-thumb]:h-6 [&::-webkit-slider-thumb]:w-6 [&::-webkit-slider-thumb]:appearance-none",
+          "[&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-violet-400",
+          "[&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:shadow-md [&::-webkit-slider-thumb]:shadow-black/40",
           "[&::-webkit-slider-thumb]:transition-transform [&::-webkit-slider-thumb]:duration-150",
           "[&::-webkit-slider-thumb]:hover:scale-110 [&::-webkit-slider-thumb]:active:scale-95",
-          "[&::-moz-range-thumb]:h-5 [&::-moz-range-thumb]:w-5 [&::-moz-range-thumb]:appearance-none",
-          "[&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-blue-500",
+          "[&::-moz-range-thumb]:h-6 [&::-moz-range-thumb]:w-6 [&::-moz-range-thumb]:appearance-none",
+          "[&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-violet-400",
           "[&::-moz-range-thumb]:bg-white [&::-moz-range-thumb]:shadow-md",
           "[&::-moz-range-track]:bg-transparent",
         )}
@@ -218,45 +225,19 @@ function SliderField({
   );
 }
 
-function ResultTile({
+function ResultRow({
   label,
   value,
   formatter,
-  icon: Icon,
-  emphasized,
 }: {
   label: string;
   value: number;
   formatter: (n: number) => string;
-  icon: ComponentType<{ className?: string }>;
-  emphasized?: boolean;
 }) {
   return (
-    <div
-      className={cn(
-        "flex-1 rounded-2xl border p-5",
-        emphasized
-          ? "border-blue-400/30 bg-blue-500/10"
-          : "border-white/10 bg-white/[0.04]",
-      )}
-    >
-      <div className="flex items-center gap-2">
-        <span
-          className={cn(
-            "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg",
-            emphasized ? "bg-blue-500/20 text-blue-300" : "bg-white/10 text-white/60",
-          )}
-        >
-          <Icon className="h-4 w-4" />
-        </span>
-        <p className="text-[13px] leading-snug font-medium text-white/50">{label}</p>
-      </div>
-      <p
-        className={cn(
-          "mt-3 font-semibold tabular-nums text-white",
-          emphasized ? "text-3xl sm:text-4xl" : "text-2xl",
-        )}
-      >
+    <div className="flex items-center justify-between gap-3">
+      <p className="text-[13px] font-medium text-white/50">{label}</p>
+      <p className="text-base font-semibold tabular-nums text-white">
         <AnimatedNumber value={value} formatter={formatter} />
       </p>
     </div>

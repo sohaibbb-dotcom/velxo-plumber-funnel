@@ -5,7 +5,13 @@ import { Loader2 } from "lucide-react";
 
 const EASE = [0.16, 1, 0.3, 1] as const;
 
-export function StepLoading() {
+export function StepLoading({
+  title = "Setting up your account...",
+  message = "We're taking you to Stripe's secure checkout to start your 30-day free trial.",
+}: {
+  title?: string;
+  message?: string;
+}) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 12 }}
@@ -14,13 +20,9 @@ export function StepLoading() {
       transition={{ duration: 0.4, ease: EASE }}
       className="flex flex-col items-center gap-4 py-6 text-center"
     >
-      <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-      <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 sm:text-3xl">
-        Setting up your account...
-      </h1>
-      <p className="max-w-xs text-sm text-zinc-500">
-        We&apos;re taking you to secure payment to start your 30-day free trial.
-      </p>
+      <Loader2 className="h-8 w-8 animate-spin text-violet-400" />
+      <h1 className="text-2xl font-semibold tracking-tight text-white sm:text-3xl">{title}</h1>
+      <p className="max-w-xs text-sm text-white/50">{message}</p>
     </motion.div>
   );
 }

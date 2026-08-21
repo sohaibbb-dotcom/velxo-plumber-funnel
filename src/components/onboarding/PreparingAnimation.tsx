@@ -13,8 +13,11 @@ const CHECKLIST = [
   "Almost ready...",
 ];
 
-const ITEM_INTERVAL_MS = 650;
-const HOLD_BEFORE_DONE_MS = 600;
+// Tightened slightly from the original pacing (was ~3.2s total) so the
+// "premium momentum" beat doesn't read as a delay on a flow we want to feel
+// fast — still deliberately paced, not instant.
+const ITEM_INTERVAL_MS = 450;
+const HOLD_BEFORE_DONE_MS = 450;
 
 /**
  * Deliberately not a spinner or a percentage bar — nothing here claims to
@@ -41,7 +44,7 @@ export function PreparingAnimation({ onDone }: { onDone: () => void }) {
         transition={{ duration: 0.4, ease: EASE }}
         className="w-full max-w-sm"
       >
-        <h1 className="text-xl font-semibold tracking-tight text-zinc-900 sm:text-2xl">
+        <h1 className="text-xl font-semibold tracking-tight text-white sm:text-2xl">
           Preparing your AI Receptionist...
         </h1>
 
@@ -52,9 +55,9 @@ export function PreparingAnimation({ onDone }: { onDone: () => void }) {
               initial={{ opacity: 0, x: -8 }}
               animate={i < visibleCount ? { opacity: 1, x: 0 } : { opacity: 0, x: -8 }}
               transition={{ duration: 0.35, ease: EASE }}
-              className="flex items-center gap-3 text-[15px] font-medium text-zinc-800"
+              className="flex items-center gap-3 text-[15px] font-medium text-white/85"
             >
-              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue-600 text-white">
+              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-blue-500 text-white">
                 <Check className="h-3 w-3" strokeWidth={3} />
               </span>
               {item}

@@ -91,12 +91,23 @@ async function fetchAllTrialHistoryRows(): Promise<{ rows: TrialHistoryRow[]; fa
   return { rows, failed: false };
 }
 
+export type PriorTrialCheck = {
+  hasPrior: boolean;
+  /** Which identifier matched, for diagnostic logging only — never exposed to the client. */
+  matchedOn: "email" | "phone" | "abn" | "lookup-failed" | null;
+};
+
 /**
  * Phone normalization can't be pushed into a plain equality filter (raw
  * formats vary), so matching stays in application code rather than adding a
  * Postgres function or duplicate normalized columns purely to index it.
+ *
+ * Returns which identifier matched (not just a boolean) so callers can log
+ * *why* a customer was denied a trial — this is the detail that let a real
+ * "customer sees $297 due today" report be conclusively traced back to a
+ * genuine prior trial on that exact email, rather than left as a guess.
  */
-export async function hasPriorTrial({
+export async function checkPriorTrial({
   businessEmail,
   businessPhone,
   abn,
@@ -104,7 +115,7 @@ export async function hasPriorTrial({
   businessEmail: string;
   businessPhone: string;
   abn: string | null;
-}): Promise<boolean> {
+}): Promise<PriorTrialCheck> {
   const targetEmail = normalizeEmail(businessEmail);
   const targetPhone = normalizeAustralianPhone(businessPhone);
   const targetAbn = normalizeAbn(abn);
@@ -116,13 +127,23 @@ export async function hasPriorTrial({
     // granting a second trial. A wrongly-denied customer can still
     // subscribe (see /api/checkout-session) — they just skip the trial —
     // so this is the safer failure direction, not a hard lockout.
-    return true;
+    return { hasPrior: true, matchedOn: "lookup-failed" };
   }
 
-  return rows.some((row) => {
-    if (normalizeEmail(row.business_email) === targetEmail) return true;
-    if (normalizeAustralianPhone(row.business_phone) === targetPhone) return true;
-    if (targetAbn && normalizeAbn(row.abn) === targetAbn) return true;
-    return false;
-  });
+  for (const row of rows) {
+    if (normalizeEmail(row.business_email) === targetEmail) return { hasPrior: true, matchedOn: "email" };
+    if (normalizeAustralianPhone(row.business_phone) === targetPhone) return { hasPrior: true, matchedOn: "phone" };
+    if (targetAbn && normalizeAbn(row.abn) === targetAbn) return { hasPrior: true, matchedOn: "abn" };
+  }
+
+  return { hasPrior: false, matchedOn: null };
+}
+
+/** Boolean-only convenience wrapper, kept for call sites that don't need the match reason. */
+export async function hasPriorTrial(args: {
+  businessEmail: string;
+  businessPhone: string;
+  abn: string | null;
+}): Promise<boolean> {
+  return (await checkPriorTrial(args)).hasPrior;
 }

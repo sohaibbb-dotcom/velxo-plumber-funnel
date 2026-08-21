@@ -750,3 +750,32 @@ on conflict (id) do nothing;
 create index if not exists onboarding_submissions_trial_started_idx
   on public.onboarding_submissions (trial_starts_at)
   where trial_starts_at is not null;
+
+-- ============================================================================
+-- Migration: two-phase onboarding / provisioning-safety gate
+--
+-- Supports the Stripe-first funnel reorder: onboarding_submissions rows are
+-- now created with only the minimal pre-checkout fields (business_name,
+-- owner_name, business_email, business_phone, plan), then UPDATED in place
+-- (same row, same public_id — never a second insert) once the customer
+-- completes the post-checkout "Finish Setup" step.
+--
+-- setup_completed_at: set once, the first time the Finish Setup submission
+-- succeeds (src/app/api/onboarding-setup/route.ts). Distinguishes "trial
+-- started" (trial_starts_at, existing column) from "actually ready for
+-- provisioning" — a paid trial with setup_completed_at still null must never
+-- trigger the external phone/SMS provisioning workflow.
+--
+-- provisioning_triggered_at: set atomically, exactly once, by
+-- src/lib/onboarding/provisioning.ts's claim-first conditional UPDATE, the
+-- moment BOTH trial_starts_at and setup_completed_at are non-null. This is
+-- the idempotency guard against firing the HighLevel "New Trial" (agency ops
+-- pipeline) provisioning trigger twice — it can be reached from either the
+-- Stripe webhook or the Finish Setup endpoint, whichever completes second.
+--
+-- This file is NOT run automatically — apply manually via the Supabase SQL
+-- editor, same as the rest of this file.
+-- ============================================================================
+alter table public.onboarding_submissions
+  add column if not exists setup_completed_at timestamptz,
+  add column if not exists provisioning_triggered_at timestamptz;

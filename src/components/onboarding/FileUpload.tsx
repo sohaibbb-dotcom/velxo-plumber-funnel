@@ -79,10 +79,10 @@ export function FileUpload({
 
   return (
     <div className="flex flex-col gap-1.5 text-left">
-      <span className="text-sm font-medium text-zinc-700">
+      <span className="text-sm font-medium text-white/75">
         {label}
-        {required && <span className="ml-1 font-normal text-zinc-400">(required)</span>}
-        {!required && <span className="ml-1 font-normal text-zinc-400">(optional)</span>}
+        {required && <span className="ml-1 text-violet-400">*</span>}
+        {!required && <span className="ml-1 font-normal text-white/35">(optional)</span>}
       </span>
 
       <input
@@ -113,17 +113,17 @@ export function FileUpload({
       )}
 
       {status === "uploaded" && value ? (
-        <div className="flex items-center justify-between gap-3 rounded-xl border border-emerald-200 bg-emerald-50/50 px-3.5 py-2.5">
-          <span className="flex min-w-0 items-center gap-2 text-sm text-zinc-700">
-            <Check className="h-4 w-4 shrink-0 text-emerald-600" strokeWidth={3} />
+        <div className="flex items-center justify-between gap-3 rounded-xl border border-emerald-400/25 bg-emerald-500/10 px-3.5 py-2.5">
+          <span className="flex min-w-0 items-center gap-2 text-sm text-white/85">
+            <Check className="h-4 w-4 shrink-0 text-emerald-400" strokeWidth={3} />
             <span className="truncate">{fileName ?? "Document"}</span>
-            <span className="shrink-0 text-xs font-medium text-emerald-700">Uploaded successfully</span>
+            <span className="shrink-0 text-xs font-medium text-emerald-300">Uploaded successfully</span>
           </span>
           <div className="flex shrink-0 items-center gap-3">
             <button
               type="button"
               onClick={() => inputRef.current?.click()}
-              className="text-xs font-medium text-blue-600 hover:text-blue-700"
+              className="text-xs font-medium text-violet-300 hover:text-violet-200"
             >
               Replace
             </button>
@@ -131,7 +131,7 @@ export function FileUpload({
               type="button"
               onClick={handleRemove}
               aria-label="Remove document"
-              className="text-zinc-400 hover:text-zinc-600"
+              className="text-white/35 hover:text-white/70"
             >
               <X className="h-4 w-4" />
             </button>
@@ -145,8 +145,8 @@ export function FileUpload({
           className={cn(
             "flex h-11 items-center gap-2.5 rounded-xl border border-dashed px-3.5 text-sm font-medium transition-colors",
             status === "error"
-              ? "border-red-300 bg-red-50/50 text-red-600"
-              : "border-zinc-300 bg-white text-zinc-500 hover:border-blue-400 hover:bg-blue-50/30",
+              ? "border-red-400/40 bg-red-500/10 text-red-300"
+              : "border-white/15 bg-white/[0.02] text-white/50 hover:border-violet-400/40 hover:bg-white/[0.04]",
           )}
         >
           {status === "uploading" ? (
@@ -158,7 +158,7 @@ export function FileUpload({
         </button>
       )}
 
-      {error && <p className="text-xs text-red-600">{error}</p>}
+      {error && <p className="text-xs text-red-400">{error}</p>}
     </div>
   );
 }

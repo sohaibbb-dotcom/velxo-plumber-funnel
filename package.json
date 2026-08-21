@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "qa:trial-eligibility": "node scripts/qa-trial-eligibility.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.110.8",

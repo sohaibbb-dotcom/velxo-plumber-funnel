@@ -1,6 +1,6 @@
 import "server-only";
 import Stripe from "stripe";
-import { isPlan, type Plan } from "@/lib/plans";
+import { isPlan, PLAN_MONTHLY_PRICE_AUD, type Plan } from "@/lib/plans";
 import type { OnboardingSubmissionRow } from "@/lib/onboarding/types";
 
 /**
@@ -54,7 +54,17 @@ export async function createSubscriptionCheckoutSession({
 
   const stripe = new Stripe(STRIPE_SECRET_KEY);
   const priceId = resolvePriceId(submission.plan);
+  const monthlyPrice = PLAN_MONTHLY_PRICE_AUD[submission.plan];
 
+  // Stripe Checkout's fixed subscription-mode template always headlines the
+  // recurring price (that IS what's being subscribed to) — there is no API
+  // parameter that reorders or re-emphasizes that hierarchy. custom_text.submit
+  // is the one supported, prominent slot for supplementary text: it renders
+  // directly beside the "Subscribe" button, the last thing a customer reads
+  // before paying. Only ever set on the genuine-trial path — omitted
+  // entirely when eligibleForTrial is false, since a repeat customer with no
+  // trial genuinely is charged today, and this text must never claim
+  // otherwise.
   const session = await stripe.checkout.sessions.create({
     mode: "subscription",
     line_items: [{ price: priceId, quantity: 1 }],
@@ -62,6 +72,15 @@ export async function createSubscriptionCheckoutSession({
       ...(eligibleForTrial ? { trial_period_days: TRIAL_PERIOD_DAYS } : {}),
       metadata: { onboarding_submission_id: submission.id, plan: submission.plan },
     },
+    ...(eligibleForTrial
+      ? {
+          custom_text: {
+            submit: {
+              message: `A$0 due today. Your ${TRIAL_PERIOD_DAYS}-day free trial starts now — you won't be charged A$${monthlyPrice}/month until it ends, and you can cancel anytime before then to pay nothing.`,
+            },
+          },
+        }
+      : {}),
     // The Stripe webhook (Phase 2) will look up this same submission by
     // public_id, the same pattern the legacy deposit flow already uses —
     // never trust name/email typed into Stripe's own checkout form.
@@ -74,6 +93,25 @@ export async function createSubscriptionCheckoutSession({
 
   if (!session.url) {
     throw new Error(`Stripe checkout session ${session.id} did not include a redirect URL.`);
+  }
+
+  // Fail-closed invariant: never hand the customer a URL that contradicts
+  // what our own onboarding page just promised them. If we believe this
+  // customer is trial-eligible, Stripe's own session MUST agree that
+  // nothing is due today — trust the session Stripe actually created, not
+  // just the request we sent it. A mismatch here (e.g. the configured Price
+  // itself has conflicting trial settings, or a future Stripe API change)
+  // must surface as a loud, safe error, never as a customer silently
+  // reaching a checkout demanding immediate payment after being told
+  // "$0 today" on our own page.
+  if (eligibleForTrial && session.amount_total !== 0) {
+    console.error(
+      `Trial-eligibility contradiction for submission ${submission.id}: eligibleForTrial=true but ` +
+        `Stripe session ${session.id} has amount_total=${session.amount_total} (expected 0). Refusing to redirect.`,
+    );
+    throw new Error(
+      `Stripe session ${session.id} does not match the expected trial terms — refusing to send the customer to a contradictory checkout.`,
+    );
   }
 
   return { url: session.url };

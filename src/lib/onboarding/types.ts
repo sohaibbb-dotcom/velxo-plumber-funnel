@@ -61,6 +61,12 @@ export type OnboardingSubmissionRow = {
   verification_document_other_description: string | null;
   address_verification_document_type: AddressVerificationDocumentType | null;
   address_verification_document_path: string | null;
+  // ── Two-phase onboarding / provisioning-safety gate ────────────────────
+  // Both nullable: unset until the Finish Setup step (setup_completed_at)
+  // and the provisioning trigger (provisioning_triggered_at) actually fire —
+  // see src/lib/onboarding/provisioning.ts.
+  setup_completed_at: string | null;
+  provisioning_triggered_at: string | null;
   created_at: string;
   updated_at: string;
 };

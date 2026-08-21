@@ -19,7 +19,7 @@ export function YesNoToggle({
 }) {
   return (
     <div className="flex flex-col gap-1.5 text-left">
-      <span className="text-sm font-medium text-zinc-700">{label}</span>
+      <span className="text-sm font-medium text-white/75">{label}</span>
       <div className="flex gap-2.5">
         {[
           { label: "Yes", val: true },
@@ -32,8 +32,8 @@ export function YesNoToggle({
               className={cn(
                 "flex h-11 flex-1 cursor-pointer items-center justify-center rounded-xl border text-sm font-medium transition-colors",
                 selected
-                  ? "border-blue-500 bg-blue-50/50 text-zinc-900"
-                  : "border-zinc-200 bg-white text-zinc-600 hover:border-blue-300 hover:bg-blue-50/30",
+                  ? "border-violet-400/60 bg-violet-500/10 text-white"
+                  : "border-white/10 bg-white/[0.03] text-white/55 hover:border-violet-400/30 hover:bg-white/[0.05]",
               )}
             >
               <input

@@ -2,7 +2,7 @@ import "server-only";
 import { NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabase/server";
 import { createSubscriptionCheckoutSession } from "@/lib/stripe/subscriptionCheckout";
-import { hasPriorTrial } from "@/lib/onboarding/trialEligibility";
+import { checkPriorTrial } from "@/lib/onboarding/trialEligibility";
 import type { OnboardingSubmissionRow } from "@/lib/onboarding/types";
 
 /**
@@ -59,16 +59,43 @@ export async function POST(request: Request) {
     );
   }
 
+  // Guards a multi-tab/stale-retry edge case introduced by the two-phase
+  // funnel: a customer could complete Stripe checkout in one tab while an
+  // older tab's cached publicId (stored client-side for the cancelled-page
+  // "try again" flow) still points at the same row. Without this check,
+  // that stale retry would mint a second Checkout Session for a row whose
+  // trial has already started, and the webhook would overwrite this row's
+  // subscription ids with the second session's — orphaning the first.
+  // trial_starts_at is only ever set by the webhook-confirmed
+  // processSubscriptionStarted, so this can't false-positive on an opened-
+  // but-abandoned session.
+  if (submission.trial_starts_at) {
+    return NextResponse.json(
+      { success: false, error: "This trial has already started." },
+      { status: 409 },
+    );
+  }
+
   try {
     // Server-side only — trial eligibility is never accepted from the
     // browser. A prior trial for this business identity (matched on email,
     // AU phone, or ABN) means this checkout still proceeds, just without
-    // trial_period_days — see hasPriorTrial and createSubscriptionCheckoutSession.
-    const eligibleForTrial = !(await hasPriorTrial({
+    // trial_period_days — see checkPriorTrial and createSubscriptionCheckoutSession.
+    const priorTrial = await checkPriorTrial({
       businessEmail: submission.business_email,
       businessPhone: submission.business_phone,
       abn: submission.abn,
-    }));
+    });
+    const eligibleForTrial = !priorTrial.hasPrior;
+
+    // Safe to log: a UUID and a category, never the actual email/phone/ABN.
+    // This is what makes a "customer saw $297 due today" report traceable to
+    // an exact cause (a real prior trial vs. a genuine misconfiguration)
+    // instead of a guess.
+    console.log(
+      `checkout-session: submission ${submission.id} eligibleForTrial=${eligibleForTrial}` +
+        (priorTrial.matchedOn ? ` (denied — matched prior trial on: ${priorTrial.matchedOn})` : ""),
+    );
 
     const { url } = await createSubscriptionCheckoutSession({
       submission,

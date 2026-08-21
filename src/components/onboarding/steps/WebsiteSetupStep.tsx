@@ -34,15 +34,15 @@ export function WebsiteSetupStep({
       />
 
       <div className="flex flex-col gap-1.5 text-left">
-        <span className="text-sm font-medium text-zinc-700">
-          Website Photos <span className="font-normal text-zinc-400">(optional)</span>
+        <span className="text-sm font-medium text-white/75">
+          Website Photos <span className="font-normal text-white/35">(optional)</span>
         </span>
         {formData.websitePhotoPaths.map((photo, i) => (
           <div
             key={photo.path}
-            className="flex items-center justify-between gap-3 rounded-xl border border-emerald-200 bg-emerald-50/50 px-3.5 py-2.5"
+            className="flex items-center justify-between gap-3 rounded-xl border border-emerald-400/25 bg-emerald-500/10 px-3.5 py-2.5"
           >
-            <span className="truncate text-sm text-zinc-700">{photo.fileName}</span>
+            <span className="truncate text-sm text-white/85">{photo.fileName}</span>
             <button
               type="button"
               onClick={() =>
@@ -52,7 +52,7 @@ export function WebsiteSetupStep({
                 }))
               }
               aria-label="Remove photo"
-              className="shrink-0 text-zinc-400 hover:text-zinc-600"
+              className="shrink-0 text-white/35 hover:text-white/70"
             >
               <X className="h-4 w-4" />
             </button>

@@ -15,23 +15,20 @@ import dynamic from "next/dynamic";
  * the hero's hydration path while `ssr: true` (the default) still renders
  * full markup for every section server-side, so nothing disappears or
  * shifts on initial paint.
+ *
+ * CompleteUpsell, Demo and Showcase are no longer rendered here — their
+ * conversion jobs are now absorbed elsewhere (CompleteUpsell's "need a
+ * website too?" nudge lives inside Pricing; Demo duplicated the missed-call
+ * story the hero and HowItWorks already tell; Showcase's full-width website
+ * iframe risked re-centering the page on "we build websites" instead of the
+ * AI Receptionist offer). Their files are untouched — just unmounted.
  */
-const Capabilities = dynamic(
-  () => import("./Capabilities").then((m) => m.Capabilities),
+const CapabilityStrip = dynamic(
+  () => import("./CapabilityStrip").then((m) => m.CapabilityStrip),
   { ssr: true },
 );
-const CompleteUpsell = dynamic(
-  () => import("./CompleteUpsell").then((m) => m.CompleteUpsell),
-  { ssr: true },
-);
-const Problem = dynamic(() => import("./Problem").then((m) => m.Problem), {
-  ssr: true,
-});
-const Demo = dynamic(() => import("./Demo").then((m) => m.Demo), {
-  ssr: true,
-});
-const Comparison = dynamic(
-  () => import("./Comparison").then((m) => m.Comparison),
+const HowItWorks = dynamic(
+  () => import("./HowItWorks").then((m) => m.HowItWorks),
   { ssr: true },
 );
 const Calculator = dynamic(
@@ -44,22 +41,24 @@ const WhyVelxo = dynamic(() => import("./WhyVelxo").then((m) => m.WhyVelxo), {
 const Pricing = dynamic(() => import("./Pricing").then((m) => m.Pricing), {
   ssr: true,
 });
-const Showcase = dynamic(() => import("./Showcase").then((m) => m.Showcase), {
+const FAQ = dynamic(() => import("./FAQ").then((m) => m.FAQ), {
   ssr: true,
 });
+const FinalCTA = dynamic(
+  () => import("./FinalCTA").then((m) => m.FinalCTA),
+  { ssr: true },
+);
 
 export function BelowFold() {
   return (
     <>
-      <Capabilities />
+      <CapabilityStrip />
+      <HowItWorks />
       <Calculator />
-      <CompleteUpsell />
-      <Problem />
-      <Demo />
-      <Comparison />
       <WhyVelxo />
       <Pricing />
-      <Showcase />
+      <FAQ />
+      <FinalCTA />
     </>
   );
 }

@@ -43,9 +43,9 @@ export function ProductExplainer() {
   }, []);
 
   return (
-    <div className="rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm sm:p-7">
-      <p className="text-xs font-semibold tracking-widest text-blue-600 uppercase">How it works</p>
-      <h2 className="mt-2 text-xl font-semibold tracking-tight text-balance text-zinc-900">
+    <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-6 backdrop-blur-xl sm:p-7">
+      <p className="text-xs font-semibold tracking-widest text-violet-300 uppercase">How it works</p>
+      <h2 className="mt-2 text-xl font-semibold tracking-tight text-balance text-white">
         Turn missed calls into booked jobs automatically.
       </h2>
 
@@ -62,8 +62,8 @@ export function ProductExplainer() {
                 <motion.span
                   animate={{
                     scale: isActive ? 1.08 : 1,
-                    backgroundColor: isActive || isDone ? "#2563eb" : "#f4f4f5",
-                    color: isActive || isDone ? "#ffffff" : "#a1a1aa",
+                    backgroundColor: isActive || isDone ? "#8b5cf6" : "rgba(255,255,255,0.06)",
+                    color: isActive || isDone ? "#ffffff" : "rgba(255,255,255,0.4)",
                   }}
                   transition={{ duration: 0.4, ease: EASE }}
                   className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full"
@@ -74,7 +74,7 @@ export function ProductExplainer() {
                   <span
                     className={cn(
                       "h-6 w-px flex-1 transition-colors duration-500",
-                      isDone ? "bg-blue-600" : "bg-zinc-200",
+                      isDone ? "bg-violet-500" : "bg-white/10",
                     )}
                   />
                 )}
@@ -84,7 +84,7 @@ export function ProductExplainer() {
                 <span
                   className={cn(
                     "text-sm font-medium transition-colors duration-300",
-                    isActive ? "text-zinc-900" : isDone ? "text-zinc-500" : "text-zinc-400",
+                    isActive ? "text-white" : isDone ? "text-white/55" : "text-white/35",
                   )}
                 >
                   {step.label}
@@ -97,7 +97,7 @@ export function ProductExplainer() {
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -4 }}
                       transition={{ duration: 0.3, ease: EASE }}
-                      className="mt-0.5 text-xs text-zinc-500"
+                      className="mt-0.5 text-xs text-white/50"
                     >
                       {step.detail}
                     </motion.span>

@@ -124,16 +124,16 @@ export function GoogleBusinessProfileConnect({
   return (
     <div className="flex flex-col gap-3 text-left">
       <div className="flex flex-col gap-1.5">
-        <span className="text-sm font-medium text-zinc-700">Connect your Google Business Profile</span>
-        <p className="text-xs text-zinc-400">
+        <span className="text-sm font-medium text-white/75">Connect your Google Business Profile</span>
+        <p className="text-xs text-white/40">
           We use this to automatically ask your customers for a Google review — no need to find or paste a link
           yourself.
         </p>
       </div>
 
       {(status === "idle" || status === "searching") && (
-        <div className="flex items-center gap-2.5 rounded-2xl border border-zinc-200 bg-zinc-50/50 px-4 py-3.5 text-xs text-zinc-500">
-          <Loader2 className="h-4 w-4 shrink-0 animate-spin text-zinc-400" />
+        <div className="flex items-center gap-2.5 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3.5 text-xs text-white/50">
+          <Loader2 className="h-4 w-4 shrink-0 animate-spin text-white/40" />
           Looking up your Google Business Profile…
         </div>
       )}
@@ -147,7 +147,7 @@ export function GoogleBusinessProfileConnect({
             transition={{ duration: 0.2 }}
             className="flex flex-col gap-2.5"
           >
-            <p className="text-xs font-medium text-zinc-600">
+            <p className="text-xs font-medium text-white/60">
               {formData.googleCandidates.length === 1
                 ? "We found your business"
                 : "We found a few matches — which one is yours?"}
@@ -158,18 +158,18 @@ export function GoogleBusinessProfileConnect({
                 type="button"
                 disabled={confirmingId !== null}
                 onClick={() => confirmCandidate(candidate)}
-                className="flex items-start justify-between gap-3 rounded-2xl border border-zinc-200 bg-white px-4 py-3.5 text-left transition-colors hover:border-blue-300 hover:bg-blue-50/30 disabled:opacity-60"
+                className="flex items-start justify-between gap-3 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3.5 text-left transition-colors hover:border-violet-400/40 hover:bg-white/[0.05] disabled:opacity-60"
               >
                 <div className="flex flex-col gap-0.5">
-                  <span className="text-sm font-semibold text-zinc-900">{candidate.name}</span>
+                  <span className="text-sm font-semibold text-white">{candidate.name}</span>
                   {candidate.formattedAddress && (
-                    <span className="flex items-center gap-1 text-xs text-zinc-500">
+                    <span className="flex items-center gap-1 text-xs text-white/50">
                       <MapPin className="h-3 w-3 shrink-0" />
                       {candidate.formattedAddress}
                     </span>
                   )}
                   {typeof candidate.rating === "number" && (
-                    <span className="flex items-center gap-1 text-xs text-zinc-500">
+                    <span className="flex items-center gap-1 text-xs text-white/50">
                       <Star className="h-3 w-3 shrink-0 fill-amber-400 text-amber-400" />
                       {candidate.rating.toFixed(1)}
                       {typeof candidate.userRatingCount === "number" && ` (${candidate.userRatingCount})`}
@@ -177,9 +177,9 @@ export function GoogleBusinessProfileConnect({
                   )}
                 </div>
                 {confirmingId === candidate.placeId ? (
-                  <Loader2 className="mt-0.5 h-4 w-4 shrink-0 animate-spin text-blue-500" />
+                  <Loader2 className="mt-0.5 h-4 w-4 shrink-0 animate-spin text-violet-400" />
                 ) : (
-                  <span className="mt-0.5 shrink-0 text-xs font-semibold text-nowrap text-blue-600">
+                  <span className="mt-0.5 shrink-0 text-xs font-semibold text-nowrap text-violet-300">
                     Yes, this is my business
                   </span>
                 )}
@@ -194,16 +194,16 @@ export function GoogleBusinessProfileConnect({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -4 }}
             transition={{ duration: 0.2 }}
-            className="flex items-center justify-between gap-3 rounded-2xl border border-emerald-200 bg-emerald-50/50 px-4 py-3.5"
+            className="flex items-center justify-between gap-3 rounded-2xl border border-emerald-400/25 bg-emerald-500/10 px-4 py-3.5"
           >
-            <span className="flex items-center gap-2 text-sm font-medium text-zinc-700">
-              <Check className="h-4 w-4 shrink-0 text-emerald-600" />
+            <span className="flex items-center gap-2 text-sm font-medium text-white/75">
+              <Check className="h-4 w-4 shrink-0 text-emerald-400" />
               {confirmedCandidate ? `Connected — ${confirmedCandidate.name}` : "Connected"}
             </span>
             <button
               type="button"
               onClick={resetToSearch}
-              className="shrink-0 text-xs font-medium text-zinc-400 underline decoration-zinc-200 underline-offset-2 hover:text-zinc-600"
+              className="shrink-0 text-xs font-medium text-white/40 underline decoration-white/15 underline-offset-2 hover:text-white/70"
             >
               That&apos;s not my business
             </button>
@@ -216,9 +216,9 @@ export function GoogleBusinessProfileConnect({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -4 }}
             transition={{ duration: 0.2 }}
-            className="flex items-start gap-2.5 rounded-2xl border border-zinc-200 bg-zinc-50/50 px-4 py-3.5 text-xs leading-relaxed text-zinc-500"
+            className="flex items-start gap-2.5 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3.5 text-xs leading-relaxed text-white/50"
           >
-            <Info className="mt-0.5 h-4 w-4 shrink-0 text-zinc-400" />
+            <Info className="mt-0.5 h-4 w-4 shrink-0 text-white/40" />
             <span>
               {status === "not_found"
                 ? "We couldn't automatically find your Google Business Profile."
@@ -234,9 +234,9 @@ export function GoogleBusinessProfileConnect({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -4 }}
             transition={{ duration: 0.2 }}
-            className="flex items-start gap-2.5 rounded-2xl border border-zinc-200 bg-zinc-50/50 px-4 py-3.5 text-xs leading-relaxed text-zinc-500"
+            className="flex items-start gap-2.5 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3.5 text-xs leading-relaxed text-white/50"
           >
-            <Info className="mt-0.5 h-4 w-4 shrink-0 text-zinc-400" />
+            <Info className="mt-0.5 h-4 w-4 shrink-0 text-white/40" />
             We&apos;ll help connect your Google Business Profile during setup.
           </motion.div>
         )}
@@ -256,13 +256,13 @@ export function GoogleBusinessProfileConnect({
                 }
               }}
               placeholder="Business name, suburb"
-              className="h-9 flex-1 rounded-lg border border-zinc-200 bg-white px-3 text-xs text-zinc-900 outline-none transition-colors placeholder:text-zinc-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15"
+              className="h-9 flex-1 rounded-lg border border-white/10 bg-white/[0.04] px-3 text-xs text-white outline-none transition-colors placeholder:text-white/30 focus:border-violet-400/60 focus:ring-2 focus:ring-violet-400/20"
             />
             <button
               type="button"
               disabled={status === "searching" || !queryInput.trim()}
               onClick={() => runSearch(queryInput)}
-              className="h-9 shrink-0 rounded-lg border border-zinc-200 px-3 text-xs font-medium text-zinc-600 transition-colors hover:border-blue-300 hover:bg-blue-50/30 disabled:opacity-50"
+              className="h-9 shrink-0 rounded-lg border border-white/10 px-3 text-xs font-medium text-white/60 transition-colors hover:border-violet-400/40 hover:bg-white/[0.05] disabled:opacity-50"
             >
               Search
             </button>
@@ -270,7 +270,7 @@ export function GoogleBusinessProfileConnect({
           <button
             type="button"
             onClick={skip}
-            className="shrink-0 self-start text-xs font-medium text-zinc-400 underline decoration-zinc-200 underline-offset-2 hover:text-zinc-600 sm:self-auto"
+            className="shrink-0 self-start text-xs font-medium text-white/40 underline decoration-white/15 underline-offset-2 hover:text-white/70 sm:self-auto"
           >
             Skip for now
           </button>

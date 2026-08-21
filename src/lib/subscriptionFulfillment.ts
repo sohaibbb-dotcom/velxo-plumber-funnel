@@ -1,8 +1,9 @@
 import "server-only";
 import Stripe from "stripe";
 import { supabaseServer } from "@/lib/supabase/server";
-import { addTag, upsertContact, moveOpportunityToStage, TRIAL_STARTED_TAG, AGENCY_PIPELINE_NAME } from "@/lib/highlevel";
+import { addTag, upsertContact, moveOpportunityToStage, TRIAL_STARTED_TAG } from "@/lib/highlevel";
 import { findSubmissionByPublicId, getStripeCustomerId } from "@/lib/depositFulfillment";
+import { triggerProvisioningIfReady } from "@/lib/onboarding/provisioning";
 
 /**
  * Trial-started fulfilment logic for the new subscription Checkout flow
@@ -132,19 +133,18 @@ export async function processSubscriptionStarted(session: Stripe.Checkout.Sessio
     console.error(`Trial started for submission ${submission.id}, but recording ghl_contact_id/ghl_opportunity_id failed:`, ghlLinkError.message);
   }
 
-  // Step 8: push the SAME contact into the agency's internal ops pipeline
-  // too — a separate pipeline in the same GHL sub-account/location, used to
-  // trigger the already-built "New Trial" workflow (internal notification +
-  // provisioning task). Reuses contactId from step 6, so this never creates
-  // a second HighLevel contact. Runs for both plans identically. If this
-  // throws, steps 4-7 above have already durably succeeded — the webhook
-  // route still releases the idempotency lock and lets Stripe retry, which
-  // is safe here for the same reason step 7 is: moveOpportunityToStage
-  // never duplicates or regresses an opportunity.
-  await moveOpportunityToStage({
-    contactId,
-    targetStageName: "New Trial",
-    name: submission.business_name,
-    pipelineName: AGENCY_PIPELINE_NAME,
-  });
+  // Step 8: attempt the provisioning trigger — gated. Pushing this contact
+  // into the agency's internal ops pipeline ("New Trial") is what starts the
+  // external phone/SMS provisioning workflow, so it must never fire until
+  // the customer has ALSO completed the post-checkout Finish Setup step
+  // (setup_completed_at), not merely started the trial. On a typical first
+  // pass this is a correct no-op (setup isn't complete yet) — provisioning
+  // actually fires later, from /api/onboarding-setup, once setup completes.
+  // If setup somehow already completed before this webhook ran (a slow
+  // webhook delivery racing a fast customer), this call is what actually
+  // fires it. If this throws, steps 4-7 above have already durably
+  // succeeded — the webhook route still releases the idempotency lock and
+  // lets Stripe retry, which is safe: triggerProvisioningIfReady claims
+  // atomically before acting, so a retry can never double-fire.
+  await triggerProvisioningIfReady(submission.id);
 }

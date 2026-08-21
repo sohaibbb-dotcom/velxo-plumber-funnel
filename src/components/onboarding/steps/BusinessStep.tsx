@@ -4,8 +4,7 @@ import type { OnboardingFormData, UpdateField } from "@/components/onboarding/ty
 
 export const BUSINESS_STEP_META = {
   title: "Verify your business",
-  description:
-    "We use these details to verify your business and provision your Velxo business phone number.",
+  description: "Required before we can provision your business phone/SMS setup.",
 };
 
 export function BusinessStep({
@@ -19,17 +18,11 @@ export function BusinessStep({
 }) {
   return (
     <>
-      <FormField
-        label="Business / Legal Name"
-        required
-        value={formData.businessName}
-        onChange={update("businessName")}
-        placeholder="Mate's Plumbing & Gas Pty Ltd"
-      />
       <div className="grid gap-4 sm:grid-cols-2">
         <FormField
           label="ABN"
           required
+          inputMode="numeric"
           value={formData.abn}
           onChange={update("abn")}
           placeholder="12 345 678 901"
@@ -37,6 +30,7 @@ export function BusinessStep({
         <FormField
           label="Business Address"
           required
+          autoComplete="street-address"
           value={formData.businessAddress}
           onChange={update("businessAddress")}
           placeholder="1 Example St, Parramatta NSW"
@@ -54,11 +48,13 @@ export function BusinessStep({
           <FormField
             label="Website"
             optional
+            type="url"
+            autoComplete="url"
             value={formData.existingWebsite}
             onChange={update("existingWebsite")}
             placeholder="https://..."
           />
-          <p className="text-xs text-zinc-400">
+          <p className="text-xs text-white/35">
             We&apos;ll use this to learn about your business and prepare your AI Receptionist.
           </p>
         </div>
