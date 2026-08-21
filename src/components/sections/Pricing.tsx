@@ -45,14 +45,26 @@ export function Pricing() {
           </p>
         </motion.div>
 
-        <div className="mx-auto mt-12 grid max-w-4xl gap-6 sm:mt-14 lg:grid-cols-2">
+        {/*
+          Desktop: both cards are columns of ONE comparison grid, sharing 7
+          explicit row tracks (eyebrow / heading / description / offer /
+          features / CTA / reassurance) via CSS subgrid — each track
+          auto-sizes to the taller of the two cards' content in that row, so
+          corresponding sections line up exactly regardless of copy-length
+          differences (e.g. Complete's longer description wrapping to two
+          lines no longer pushes only Complete's price box down). The
+          features row is `minmax(0,1fr)` so it absorbs any remaining height
+          difference, keeping the CTA row's baseline aligned. Mobile keeps
+          the original natural flex-col stack — subgrid only applies at lg:.
+        */}
+        <div className="mx-auto mt-12 grid max-w-4xl gap-6 sm:mt-14 lg:grid-cols-2 lg:items-stretch lg:gap-x-6 lg:gap-y-0 lg:[grid-template-rows:auto_auto_auto_auto_minmax(0,1fr)_auto_auto]">
           {/* AI Receptionist — the focused, lowest-friction entry point */}
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, amount: 0.15 }}
             transition={{ duration: 0.6, ease: EASE }}
-            className="flex flex-col rounded-3xl border border-white/10 bg-white/[0.03] p-6 shadow-2xl shadow-black/40 backdrop-blur-xl sm:p-8"
+            className="flex flex-col rounded-3xl border border-white/10 bg-white/[0.03] p-6 shadow-2xl shadow-black/40 backdrop-blur-xl sm:p-8 lg:col-start-1 lg:row-[1/-1] lg:grid lg:gap-y-0 lg:[grid-template-rows:subgrid]"
           >
             <p className="text-[13px] font-medium text-white/45">Just need the AI system?</p>
             <h3 className="mt-2 text-2xl font-semibold tracking-tight text-white sm:text-3xl">
@@ -64,24 +76,22 @@ export function Pricing() {
 
             <PriceBlock price={PLAN_MONTHLY_PRICE_AUD.ai_receptionist} />
 
-            <ul className="mt-7 grid flex-1 grid-cols-1 content-start gap-3 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
+            <ul className="mt-7 grid grid-cols-1 content-start gap-3 self-start sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
               {receptionistFeatures.map((item, i) => (
                 <ChecklistItem key={item} label={item} delay={i * 0.05} />
               ))}
             </ul>
 
-            <div className="mt-8 flex flex-col items-center gap-3">
-              <a
-                href={TRIAL_CTA_HREF}
-                className="group inline-flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-violet-600 to-blue-600 px-6 py-3.5 text-[15px] font-semibold text-white shadow-lg shadow-violet-950/40 transition-all duration-200 hover:from-violet-500 hover:to-blue-500"
-              >
-                Start My 30-Day Free Trial
-                <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5" />
-              </a>
-              <p className="text-center text-xs text-white/40">
-                Cancel before your trial ends and pay nothing. Most setups are ready within 1 business day.
-              </p>
-            </div>
+            <a
+              href={TRIAL_CTA_HREF}
+              className="group mt-8 inline-flex w-full items-center justify-center gap-2 self-start rounded-full bg-gradient-to-r from-violet-600 to-blue-600 px-6 py-3.5 text-[15px] font-semibold text-white shadow-lg shadow-violet-950/40 transition-all duration-200 hover:from-violet-500 hover:to-blue-500"
+            >
+              Start My 30-Day Free Trial
+              <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5" />
+            </a>
+            <p className="mt-3 self-start text-center text-xs text-white/40">
+              Cancel before your trial ends and pay nothing. Most setups are ready within 1 business day.
+            </p>
           </motion.div>
 
           {/* Velxo Complete — the natural upgrade for a business that also needs a website */}
@@ -90,7 +100,7 @@ export function Pricing() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, amount: 0.15 }}
             transition={{ duration: 0.6, delay: 0.08, ease: EASE }}
-            className="relative flex flex-col overflow-hidden rounded-3xl border border-violet-400/25 bg-gradient-to-b from-violet-500/[0.07] via-white/[0.03] to-white/[0.03] p-6 shadow-2xl shadow-black/40 backdrop-blur-xl sm:p-8"
+            className="relative flex flex-col overflow-hidden rounded-3xl border border-violet-400/25 bg-gradient-to-b from-violet-500/[0.07] via-white/[0.03] to-white/[0.03] p-6 shadow-2xl shadow-black/40 backdrop-blur-xl sm:p-8 lg:col-start-2 lg:row-[1/-1] lg:grid lg:gap-y-0 lg:[grid-template-rows:subgrid]"
           >
             <div
               aria-hidden
@@ -104,7 +114,7 @@ export function Pricing() {
               Velxo Complete
               <Globe className="h-5 w-5 text-violet-300" />
             </h3>
-            <p className="relative mt-2 text-[15px] leading-relaxed text-white/55">
+            <p className="relative mt-1.5 text-[15px] leading-snug text-white/55">
               Your full customer-conversion system — everything in AI Receptionist, plus your website.
             </p>
 
@@ -112,7 +122,7 @@ export function Pricing() {
               <PriceBlock price={PLAN_MONTHLY_PRICE_AUD.complete} />
             </div>
 
-            <div className="relative mt-7 flex flex-1 flex-col gap-3">
+            <div className="relative mt-7 flex flex-col gap-3 self-start">
               <div className="flex w-fit items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[13px] font-medium text-white/70">
                 <Check className="h-3.5 w-3.5 text-emerald-400" strokeWidth={3} />
                 Everything in AI Receptionist
@@ -124,18 +134,16 @@ export function Pricing() {
               </ul>
             </div>
 
-            <div className="relative mt-8 flex flex-col items-center gap-3">
-              <a
-                href={PREVIEW_FORM_PATH}
-                className="group inline-flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-violet-600 to-blue-600 px-6 py-3.5 text-[15px] font-semibold text-white shadow-lg shadow-violet-950/40 transition-all duration-200 hover:from-violet-500 hover:to-blue-500"
-              >
-                See My Business Preview
-                <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5" />
-              </a>
-              <p className="text-center text-xs text-white/40">
-                Cancel before your trial ends and pay nothing.
-              </p>
-            </div>
+            <a
+              href={PREVIEW_FORM_PATH}
+              className="group relative mt-8 inline-flex w-full items-center justify-center gap-2 self-start rounded-full bg-gradient-to-r from-violet-600 to-blue-600 px-6 py-3.5 text-[15px] font-semibold text-white shadow-lg shadow-violet-950/40 transition-all duration-200 hover:from-violet-500 hover:to-blue-500"
+            >
+              See My Business Preview
+              <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5" />
+            </a>
+            <p className="relative mt-3 self-start text-center text-xs text-white/40">
+              Cancel before your trial ends and pay nothing.
+            </p>
           </motion.div>
         </div>
       </div>
