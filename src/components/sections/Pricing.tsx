@@ -1,13 +1,11 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { ArrowRight, Check, Rocket } from "lucide-react";
-import Link from "next/link";
+import { ArrowRight, Check, Globe } from "lucide-react";
+import { PLAN_MONTHLY_PRICE_AUD } from "@/lib/plans";
 import { PREVIEW_FORM_PATH, TRIAL_CTA_HREF } from "@/lib/routes";
 
 const EASE = [0.16, 1, 0.3, 1] as const;
-
-const COMPLETE_TRUST_LINE = "30 days free · Then A$397/month · No setup fee";
 
 const receptionistFeatures = [
   "AI Missed Call Replies",
@@ -18,6 +16,11 @@ const receptionistFeatures = [
   "Automated Follow-Ups",
   "Sales Pipeline",
   "AI Automations",
+];
+
+const completeAdditions = [
+  "A custom website for your business",
+  "Logo, brand colours & photos handled for you",
 ];
 
 export function Pricing() {
@@ -32,132 +35,132 @@ export function Pricing() {
           className="mx-auto max-w-2xl text-center"
         >
           <p className="text-xs font-semibold tracking-widest text-violet-300 uppercase">
-            Pricing &amp; Offer
+            Pricing &amp; Plans
           </p>
           <h2 className="mt-3 text-3xl font-semibold tracking-tight text-balance text-white sm:text-4xl md:text-5xl">
-            One product. One clear offer.
+            Two ways to work with Velxo.
           </h2>
           <p className="mx-auto mt-3 max-w-md text-base text-white/50 sm:text-lg">
-            Try the AI Receptionist free for 30 days — no charge today.
+            Both start with a 30-day free trial. $0 today — cancel before it ends and pay nothing.
           </p>
         </motion.div>
 
-        {/* Primary offer — the only decision that matters here */}
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, amount: 0.15 }}
-          transition={{ duration: 0.7, ease: EASE }}
-          className="relative mx-auto mt-12 max-w-2xl overflow-hidden rounded-3xl border border-white/10 bg-white/[0.04] p-6 shadow-2xl shadow-black/40 backdrop-blur-xl sm:mt-14 sm:p-10"
-        >
-          <div
-            aria-hidden
-            className="pointer-events-none absolute -top-24 left-1/2 h-64 w-[420px] -translate-x-1/2 rounded-full bg-gradient-to-br from-violet-600/25 to-blue-600/15 blur-3xl"
-          />
-
-          <span className="relative inline-flex w-fit items-center rounded-full bg-violet-500/15 px-3 py-1 text-[11px] font-semibold tracking-wide text-violet-300 uppercase">
-            The Offer
-          </span>
-
-          <h3 className="relative mt-4 text-2xl font-semibold tracking-tight text-white sm:text-3xl">
-            Velxo AI Receptionist
-          </h3>
-          <p className="relative mt-2 max-w-md text-[15px] leading-relaxed text-white/55">
-            Instant missed-call replies, AI conversations, booking, follow-ups
-            and reviews — so every enquiry gets handled.
-          </p>
-
-          {/* The offer, grouped in its own block so the financial story reads
-              in one glance: the trial is the headline, $0 today removes the
-              friction, and the ongoing price stays fully visible — never
-              shrunk into microcopy. */}
-          <div className="relative mt-7 rounded-2xl border border-white/10 bg-white/[0.03] p-5 sm:p-6">
-            <p className="text-[11px] font-semibold tracking-widest text-white/45 uppercase">
-              Your Offer
-            </p>
-            <p className="mt-2 text-3xl font-bold tracking-tight text-white sm:text-4xl">
-              30 Days{" "}
-              <span className="bg-gradient-to-r from-violet-400 to-blue-400 bg-clip-text text-transparent">
-                Free
-              </span>
-            </p>
-            <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1.5">
-              <span className="inline-flex items-center rounded-full border border-emerald-400/25 bg-emerald-500/10 px-3 py-1 text-sm font-semibold text-emerald-300">
-                $0 today
-              </span>
-              <span className="text-[15px] font-medium text-white/65">
-                then A$297/month after your trial
-              </span>
-            </div>
-          </div>
-
-          <p className="relative mt-8 text-[11px] font-semibold tracking-widest text-white/45 uppercase">
-            What&apos;s Included
-          </p>
-          <ul className="relative mt-3 grid grid-cols-1 gap-3.5 sm:grid-cols-2">
-            {receptionistFeatures.map((item, i) => (
-              <ChecklistItem key={item} label={item} delay={i * 0.06} />
-            ))}
-          </ul>
-
-          <div className="relative mt-8 flex flex-col items-center gap-3">
-            <a
-              href={TRIAL_CTA_HREF}
-              className="group inline-flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-violet-600 to-blue-600 px-6 py-3.5 text-[15px] font-semibold text-white shadow-lg shadow-violet-950/40 transition-all duration-200 hover:from-violet-500 hover:to-blue-500 sm:w-auto"
-            >
-              Start My 30-Day Free Trial
-              <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5" />
-            </a>
-            <p className="text-center text-xs text-white/40">
-              Cancel before your trial ends and pay nothing.
-            </p>
-          </div>
-        </motion.div>
-
-        {/* Go-live claim + optional Complete upgrade — both secondary to the
-            offer above, not competing with it for attention. */}
-        <div className="mx-auto mt-6 grid max-w-2xl gap-4 sm:grid-cols-2">
+        <div className="mx-auto mt-12 grid max-w-4xl gap-6 sm:mt-14 lg:grid-cols-2">
+          {/* AI Receptionist — the focused, lowest-friction entry point */}
           <motion.div
-            initial={{ opacity: 0, y: 16 }}
+            initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, amount: 0.4 }}
-            transition={{ duration: 0.5, ease: EASE }}
-            className="flex items-start gap-3 rounded-2xl border border-white/10 bg-white/[0.03] p-5"
+            viewport={{ once: true, amount: 0.15 }}
+            transition={{ duration: 0.6, ease: EASE }}
+            className="flex flex-col rounded-3xl border border-white/10 bg-white/[0.03] p-6 shadow-2xl shadow-black/40 backdrop-blur-xl sm:p-8"
           >
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-300">
-              <Rocket className="h-4 w-4" />
-            </span>
-            <div>
-              <h3 className="text-sm font-semibold text-white">Go live fast</h3>
-              <p className="mt-1 text-[13px] leading-relaxed text-white/50">
-                Most setups are ready within 1 business day.
+            <p className="text-[13px] font-medium text-white/45">Just need the AI system?</p>
+            <h3 className="mt-2 text-2xl font-semibold tracking-tight text-white sm:text-3xl">
+              Velxo AI Receptionist
+            </h3>
+            <p className="mt-2 text-[15px] leading-relaxed text-white/55">
+              Stop losing jobs from missed calls.
+            </p>
+
+            <PriceBlock price={PLAN_MONTHLY_PRICE_AUD.ai_receptionist} />
+
+            <ul className="mt-7 grid flex-1 grid-cols-1 content-start gap-3 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
+              {receptionistFeatures.map((item, i) => (
+                <ChecklistItem key={item} label={item} delay={i * 0.05} />
+              ))}
+            </ul>
+
+            <div className="mt-8 flex flex-col items-center gap-3">
+              <a
+                href={TRIAL_CTA_HREF}
+                className="group inline-flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-violet-600 to-blue-600 px-6 py-3.5 text-[15px] font-semibold text-white shadow-lg shadow-violet-950/40 transition-all duration-200 hover:from-violet-500 hover:to-blue-500"
+              >
+                Start My 30-Day Free Trial
+                <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5" />
+              </a>
+              <p className="text-center text-xs text-white/40">
+                Cancel before your trial ends and pay nothing. Most setups are ready within 1 business day.
               </p>
             </div>
           </motion.div>
 
+          {/* Velxo Complete — the natural upgrade for a business that also needs a website */}
           <motion.div
-            id="complete"
-            initial={{ opacity: 0, y: 16 }}
+            initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, amount: 0.4 }}
-            transition={{ duration: 0.5, delay: 0.06, ease: EASE }}
-            className="scroll-mt-24 rounded-2xl border border-white/10 bg-white/[0.03] p-5"
+            viewport={{ once: true, amount: 0.15 }}
+            transition={{ duration: 0.6, delay: 0.08, ease: EASE }}
+            className="relative flex flex-col overflow-hidden rounded-3xl border border-violet-400/25 bg-gradient-to-b from-violet-500/[0.07] via-white/[0.03] to-white/[0.03] p-6 shadow-2xl shadow-black/40 backdrop-blur-xl sm:p-8"
           >
-            <h3 className="text-sm font-semibold text-white">Need a website too?</h3>
-            <p className="mt-1 text-[13px] leading-relaxed text-white/50">
-              Velxo Complete adds a full site — {COMPLETE_TRUST_LINE}.
+            <div
+              aria-hidden
+              className="pointer-events-none absolute -top-20 right-0 h-52 w-64 rounded-full bg-gradient-to-br from-violet-600/20 to-blue-600/10 blur-3xl"
+            />
+
+            <p className="relative text-[13px] font-medium text-violet-200/70">
+              Need the whole customer-conversion setup?
             </p>
-            <Link
-              href={PREVIEW_FORM_PATH}
-              className="mt-2.5 inline-flex items-center gap-1.5 text-[13px] font-medium text-violet-300 underline decoration-violet-400/30 underline-offset-4 transition-colors hover:text-violet-200"
-            >
-              See my free Business Preview
-              <ArrowRight className="h-3 w-3" />
-            </Link>
+            <h3 className="relative mt-2 flex items-center gap-2 text-2xl font-semibold tracking-tight text-white sm:text-3xl">
+              Velxo Complete
+              <Globe className="h-5 w-5 text-violet-300" />
+            </h3>
+            <p className="relative mt-2 text-[15px] leading-relaxed text-white/55">
+              Your full customer-conversion system — everything in AI Receptionist, plus your website.
+            </p>
+
+            <div className="relative">
+              <PriceBlock price={PLAN_MONTHLY_PRICE_AUD.complete} />
+            </div>
+
+            <div className="relative mt-7 flex flex-1 flex-col gap-3">
+              <div className="flex w-fit items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[13px] font-medium text-white/70">
+                <Check className="h-3.5 w-3.5 text-emerald-400" strokeWidth={3} />
+                Everything in AI Receptionist
+              </div>
+              <ul className="flex flex-col gap-3">
+                {completeAdditions.map((item, i) => (
+                  <ChecklistItem key={item} label={item} delay={i * 0.05} />
+                ))}
+              </ul>
+            </div>
+
+            <div className="relative mt-8 flex flex-col items-center gap-3">
+              <a
+                href={PREVIEW_FORM_PATH}
+                className="group inline-flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-violet-600 to-blue-600 px-6 py-3.5 text-[15px] font-semibold text-white shadow-lg shadow-violet-950/40 transition-all duration-200 hover:from-violet-500 hover:to-blue-500"
+              >
+                See My Business Preview
+                <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5" />
+              </a>
+              <p className="text-center text-xs text-white/40">
+                Cancel before your trial ends and pay nothing.
+              </p>
+            </div>
           </motion.div>
         </div>
       </div>
     </section>
+  );
+}
+
+/** Shared trial/price block: the offer reads in one glance, ongoing price never shrunk into microcopy. */
+function PriceBlock({ price }: { price: number }) {
+  return (
+    <div className="mt-6 rounded-2xl border border-white/10 bg-white/[0.03] p-5">
+      <p className="text-[11px] font-semibold tracking-widest text-white/45 uppercase">Your Offer</p>
+      <p className="mt-2 text-2xl font-bold tracking-tight text-white sm:text-3xl">
+        30 Days{" "}
+        <span className="bg-gradient-to-r from-violet-400 to-blue-400 bg-clip-text text-transparent">
+          Free
+        </span>
+      </p>
+      <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1.5">
+        <span className="inline-flex items-center rounded-full border border-emerald-400/25 bg-emerald-500/10 px-3 py-1 text-sm font-semibold text-emerald-300">
+          $0 today
+        </span>
+        <span className="text-[15px] font-medium text-white/65">then A${price}/month after your trial</span>
+      </div>
+    </div>
   );
 }
 
