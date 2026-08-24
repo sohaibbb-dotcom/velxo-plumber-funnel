@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { ArrowRight, Info } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { TRIAL_CTA_HREF } from "@/lib/routes";
+import { trackFunnelEvent } from "@/lib/analytics/events";
 
 const EASE = [0.16, 1, 0.3, 1] as const;
 const WEEKS_PER_MONTH = 4.33;
@@ -144,6 +145,13 @@ export function Calculator() {
           </p>
           <a
             href={TRIAL_CTA_HREF}
+            onClick={() =>
+              trackFunnelEvent("PrimaryCTAClick", {
+                plan: "ai_receptionist",
+                location: "calculator",
+                destination: TRIAL_CTA_HREF,
+              })
+            }
             className="group inline-flex w-full shrink-0 items-center justify-center gap-2 rounded-full bg-gradient-to-r from-violet-600 to-blue-600 px-6 py-3 text-sm font-semibold text-white shadow-md shadow-violet-950/30 transition-all duration-200 hover:from-violet-500 hover:to-blue-500 sm:w-auto"
           >
             Start My 30-Day Free Trial

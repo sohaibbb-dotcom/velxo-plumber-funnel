@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist } from "next/font/google";
 import { siteConfig } from "@/config/site";
 import { MetaPixel } from "@/components/analytics/MetaPixel";
+import { AttributionCapture } from "@/components/analytics/AttributionCapture";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -23,6 +24,7 @@ export default function RootLayout({
     <html lang="en" className={`${geistSans.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col">
         <MetaPixel />
+        <AttributionCapture />
         {children}
       </body>
     </html>

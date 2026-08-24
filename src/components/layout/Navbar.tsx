@@ -8,6 +8,7 @@ import { navItems } from "@/data/nav";
 import { siteConfig } from "@/config/site";
 import { cn } from "@/lib/utils";
 import { TRIAL_CTA_HREF } from "@/lib/routes";
+import { trackFunnelEvent } from "@/lib/analytics/events";
 
 const TRIAL_LABEL = "Start My 30-Day Free Trial";
 
@@ -42,6 +43,13 @@ export function Navbar() {
         <div className="hidden md:flex">
           <a
             href={TRIAL_CTA_HREF}
+            onClick={() =>
+              trackFunnelEvent("PrimaryCTAClick", {
+                plan: "ai_receptionist",
+                location: "navbar-desktop",
+                destination: TRIAL_CTA_HREF,
+              })
+            }
             className="inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-violet-600 to-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-md shadow-violet-950/30 transition-all duration-200 hover:from-violet-500 hover:to-blue-500"
           >
             {TRIAL_LABEL}
@@ -81,7 +89,14 @@ export function Navbar() {
               ))}
               <a
                 href={TRIAL_CTA_HREF}
-                onClick={() => setOpen(false)}
+                onClick={() => {
+                  trackFunnelEvent("PrimaryCTAClick", {
+                    plan: "ai_receptionist",
+                    location: "navbar-mobile",
+                    destination: TRIAL_CTA_HREF,
+                  });
+                  setOpen(false);
+                }}
                 className={cn(
                   "mt-2 inline-flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-violet-600 to-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-md shadow-violet-950/30",
                 )}

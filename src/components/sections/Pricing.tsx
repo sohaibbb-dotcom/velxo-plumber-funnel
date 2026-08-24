@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { ArrowRight, Check, Globe } from "lucide-react";
 import { PLAN_MONTHLY_PRICE_AUD } from "@/lib/plans";
 import { PREVIEW_FORM_PATH, TRIAL_CTA_HREF } from "@/lib/routes";
+import { trackFunnelEvent } from "@/lib/analytics/events";
 
 const EASE = [0.16, 1, 0.3, 1] as const;
 
@@ -84,6 +85,13 @@ export function Pricing() {
 
             <a
               href={TRIAL_CTA_HREF}
+              onClick={() =>
+                trackFunnelEvent("PrimaryCTAClick", {
+                  plan: "ai_receptionist",
+                  location: "pricing-ai_receptionist",
+                  destination: TRIAL_CTA_HREF,
+                })
+              }
               className="group mt-8 inline-flex w-full items-center justify-center gap-2 self-start rounded-full bg-gradient-to-r from-violet-600 to-blue-600 px-6 py-3.5 text-[15px] font-semibold text-white shadow-lg shadow-violet-950/40 transition-all duration-200 hover:from-violet-500 hover:to-blue-500"
             >
               Start My 30-Day Free Trial
@@ -136,6 +144,13 @@ export function Pricing() {
 
             <a
               href={PREVIEW_FORM_PATH}
+              onClick={() =>
+                trackFunnelEvent("PrimaryCTAClick", {
+                  plan: "complete",
+                  location: "pricing-complete",
+                  destination: PREVIEW_FORM_PATH,
+                })
+              }
               className="group relative mt-8 inline-flex w-full items-center justify-center gap-2 self-start rounded-full bg-gradient-to-r from-violet-600 to-blue-600 px-6 py-3.5 text-[15px] font-semibold text-white shadow-lg shadow-violet-950/40 transition-all duration-200 hover:from-violet-500 hover:to-blue-500"
             >
               See My Business Preview

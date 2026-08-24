@@ -3,6 +3,7 @@
 import { motion } from "framer-motion";
 import { ArrowRight } from "lucide-react";
 import { TRIAL_CTA_HREF } from "@/lib/routes";
+import { trackFunnelEvent } from "@/lib/analytics/events";
 
 const EASE = [0.16, 1, 0.3, 1] as const;
 
@@ -46,6 +47,13 @@ export function FinalCTA() {
         >
           <a
             href={TRIAL_CTA_HREF}
+            onClick={() =>
+              trackFunnelEvent("PrimaryCTAClick", {
+                plan: "ai_receptionist",
+                location: "final-cta",
+                destination: TRIAL_CTA_HREF,
+              })
+            }
             className="group inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-violet-600 to-blue-600 px-8 py-4 text-base font-semibold text-white shadow-lg shadow-violet-950/40 transition-all duration-200 hover:from-violet-500 hover:to-blue-500 hover:shadow-violet-500/25"
           >
             Start My 30-Day Free Trial

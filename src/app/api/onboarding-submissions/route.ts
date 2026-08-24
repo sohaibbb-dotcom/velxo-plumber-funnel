@@ -4,6 +4,7 @@ import { supabaseServer } from "@/lib/supabase/server";
 import { reuseForOnboarding } from "@/lib/leadFulfillment";
 import { isPlan } from "@/lib/plans";
 import { asString, asStringArray, stripHtml, isValidHttpUrl, EMAIL_REGEX } from "@/lib/onboarding/sanitize";
+import { sanitizeAttribution } from "@/lib/attributionSanitize";
 import type { OnboardingSubmissionRow } from "@/lib/onboarding/types";
 
 /**
@@ -83,6 +84,8 @@ type RequestBody = {
    * backward compatibility: legacy onboarding.html doesn't send it.
    */
   plan?: unknown;
+  /** Best-effort — see src/lib/attribution.ts. Absent for legacy onboarding.html. */
+  attribution?: unknown;
 };
 
 /**
@@ -198,6 +201,7 @@ export async function POST(request: Request) {
   }
 
   const previewRequestId = await findPreviewRequestId(body.previewPublicId);
+  const attribution = sanitizeAttribution(body.attribution);
 
   const { data: inserted, error: insertError } = await supabaseServer
     .from("onboarding_submissions")
@@ -216,6 +220,16 @@ export async function POST(request: Request) {
       referral_source: referralSource,
       plan,
       preview_request_id: previewRequestId,
+      meta_ad_id: attribution.metaAdId,
+      meta_adset_id: attribution.metaAdsetId,
+      meta_campaign_id: attribution.metaCampaignId,
+      meta_creative_id: attribution.metaCreativeId,
+      fbclid: attribution.fbclid,
+      utm_source: attribution.utmSource,
+      utm_medium: attribution.utmMedium,
+      utm_campaign: attribution.utmCampaign,
+      utm_content: attribution.utmContent,
+      utm_term: attribution.utmTerm,
     })
     .select("*")
     .single();

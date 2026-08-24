@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
 import { Wrench } from "lucide-react";
@@ -11,6 +11,8 @@ import { TrialReassurance } from "@/components/onboarding/TrialReassurance";
 import { StepLoading } from "@/components/onboarding/StepLoading";
 import { StepError } from "@/components/onboarding/StepError";
 import { PrecheckoutShowcase } from "@/components/onboarding/PrecheckoutShowcase";
+import { trackFunnelEvent } from "@/lib/analytics/events";
+import { getStoredAttribution } from "@/lib/attribution";
 
 const GENERIC_ERROR = "We couldn't save your details. Please try again.";
 const EASE = [0.16, 1, 0.3, 1] as const;
@@ -62,6 +64,7 @@ async function submitMinimalOnboarding(
         businessEmail: data.businessEmail,
         plan,
         previewPublicId: previewPublicId ?? undefined,
+        attribution: getStoredAttribution(),
       }),
     });
 
@@ -78,6 +81,16 @@ async function submitMinimalOnboarding(
     if (!publicId) {
       return { success: false, error: GENERIC_ERROR };
     }
+
+    // Fired only now the application has actually accepted the submission
+    // (a 2xx with success:true and a real reference id) — not merely because
+    // the submit button was clicked, and not on a validation failure above.
+    trackFunnelEvent("OnboardingComplete", {
+      plan,
+      previewPublicId: previewPublicId ?? undefined,
+      onboardingSubmissionId: publicId,
+      metadata: { linkedToPreview: previewPublicId != null },
+    });
 
     // Written before the checkout-session call (not after redirect), so a
     // cancelled/interrupted redirect still leaves the retry path usable.
@@ -103,6 +116,20 @@ async function submitMinimalOnboarding(
       return { success: false, error: message };
     }
 
+    // Fired only now Stripe itself has confirmed a real Checkout Session
+    // exists (checkoutPayload.success + a url) — not merely because
+    // "Continue to Secure Checkout" was clicked. eligibleForTrial/amountDueToday
+    // are the same server-computed values the checkout-session route already
+    // used to build this session, never re-derived or trusted from elsewhere.
+    trackFunnelEvent("CheckoutCreated", {
+      plan,
+      onboardingSubmissionId: publicId,
+      metadata: {
+        trialEligible: checkoutPayload.eligibleForTrial === true,
+        amountDueTodayIsZero: checkoutPayload.eligibleForTrial === true,
+      },
+    });
+
     return { success: true, checkoutUrl: checkoutPayload.url };
   } catch {
     return { success: false, error: GENERIC_ERROR };
@@ -115,10 +142,40 @@ export function OnboardingFlow({ plan, previewPublicId }: { plan: Plan; previewP
   const [errorMessage, setErrorMessage] = useState(GENERIC_ERROR);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Fires once per page visit, independent of form interaction — this is
+  // what lets us distinguish "CTA clicked -> onboarding reached" from "CTA
+  // clicked -> onboarding never loaded". Ref-guarded (not just an empty
+  // dependency array) so React Strict Mode's deliberate double-invoke of
+  // effects in development can never duplicate it.
+  const hasViewedRef = useRef(false);
+  useEffect(() => {
+    if (hasViewedRef.current) return;
+    hasViewedRef.current = true;
+    trackFunnelEvent("OnboardingView", {
+      plan,
+      previewPublicId: previewPublicId ?? undefined,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Fires once, on the FIRST interaction with any of the four fields — not
+  // once per keystroke, not once per field switched. Distinguishes "viewed
+  // but never touched the form" from "began the form, abandoned before
+  // submission". The ref check is inlined directly in the event handler
+  // (rather than a separate helper function) so it's unambiguous to React's
+  // eslint rules that this ref is only ever read/written from an event
+  // handler, never during render.
+  const hasStartedRef = useRef(false);
+
   const update =
     (field: keyof MinimalFormData) =>
-    (e: React.ChangeEvent<HTMLInputElement>) =>
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      if (!hasStartedRef.current) {
+        hasStartedRef.current = true;
+        trackFunnelEvent("OnboardingStart", { plan });
+      }
       setFormData((prev) => ({ ...prev, [field]: e.target.value }));
+    };
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();

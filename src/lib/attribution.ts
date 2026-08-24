@@ -1,10 +1,13 @@
 /**
- * Client-side capture of Meta ad attribution, read once at the /preview
- * landing page and persisted so it survives a refresh or browsing around
- * before the form is submitted. This is the ONLY point attribution is ever
- * read from a URL — everything downstream of the preview_requests row
- * (onboarding, Stripe) traces back via that row's own id, never by
- * expecting these values to still be present later.
+ * Client-side capture of Meta ad attribution, persisted so it survives a
+ * refresh or browsing around before a form is submitted.
+ * captureAttributionFromUrl() is called from every page via
+ * src/components/analytics/AttributionCapture.tsx (mounted in the root
+ * layout) — not just /preview — since the AI Receptionist funnel's entry
+ * point is the homepage, not /preview. This is the ONLY mechanism
+ * attribution is ever read from a URL — everything downstream (onboarding,
+ * Stripe) traces back via a row's own id, never by expecting these values to
+ * still be present later.
  *
  * Storage is same-origin localStorage, which cannot and does not need to
  * survive the hop to onboarding.html (a different domain) — that hop is

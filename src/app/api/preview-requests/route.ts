@@ -5,6 +5,7 @@ import { findColorScheme } from "@/lib/colorSchemes";
 import { generateServices } from "@/lib/preview/content";
 import { callSiteGenerator } from "@/lib/preview/generator";
 import { pushPreviewLeadToHighLevel } from "@/lib/leadFulfillment";
+import { sanitizeAttribution, type CleanAttribution } from "@/lib/attributionSanitize";
 import type { PreviewRequestRow } from "@/lib/preview/types";
 
 const MAX_LENGTHS = {
@@ -15,27 +16,12 @@ const MAX_LENGTHS = {
   suburb: 200,
   primaryService: 200,
   website: 300,
-  attributionValue: 255,
 } as const;
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const GENERIC_VALIDATION_ERROR = "Please check the required fields and try again.";
 const GENERIC_SERVER_ERROR = "We couldn't save your request. Please try again.";
-
-/** Mirrors the client-side shape from src/lib/attribution.ts — Meta's raw query param names. */
-type AttributionInput = {
-  ad_id?: unknown;
-  adset_id?: unknown;
-  campaign_id?: unknown;
-  creative_id?: unknown;
-  fbclid?: unknown;
-  utm_source?: unknown;
-  utm_medium?: unknown;
-  utm_campaign?: unknown;
-  utm_content?: unknown;
-  utm_term?: unknown;
-};
 
 type RequestBody = {
   businessName?: unknown;
@@ -48,20 +34,6 @@ type RequestBody = {
   colorScheme?: unknown;
   honeypot?: unknown;
   attribution?: unknown;
-};
-
-/** DB-column-named, post-sanitization. Every field independently optional — attribution is best-effort. */
-type CleanAttribution = {
-  metaAdId: string | null;
-  metaAdsetId: string | null;
-  metaCampaignId: string | null;
-  metaCreativeId: string | null;
-  fbclid: string | null;
-  utmSource: string | null;
-  utmMedium: string | null;
-  utmCampaign: string | null;
-  utmContent: string | null;
-  utmTerm: string | null;
 };
 
 type CleanInput = {
@@ -93,34 +65,6 @@ function asString(value: unknown): string {
  */
 function stripHtml(value: string): string {
   return value.replace(/[<>]/g, "");
-}
-
-/**
- * Best-effort: a missing or malformed attribution object never fails the
- * submission, it just means this lead won't be traceable back to an ad.
- * Each value is trimmed, HTML-stripped, and length-capped like every other
- * free-text field this route already sanitizes.
- */
-function sanitizeAttribution(raw: unknown): CleanAttribution {
-  const input = raw && typeof raw === "object" ? (raw as AttributionInput) : {};
-
-  const clean = (value: unknown): string | null => {
-    const stripped = stripHtml(asString(value)).slice(0, MAX_LENGTHS.attributionValue);
-    return stripped.length > 0 ? stripped : null;
-  };
-
-  return {
-    metaAdId: clean(input.ad_id),
-    metaAdsetId: clean(input.adset_id),
-    metaCampaignId: clean(input.campaign_id),
-    metaCreativeId: clean(input.creative_id),
-    fbclid: clean(input.fbclid),
-    utmSource: clean(input.utm_source),
-    utmMedium: clean(input.utm_medium),
-    utmCampaign: clean(input.utm_campaign),
-    utmContent: clean(input.utm_content),
-    utmTerm: clean(input.utm_term),
-  };
 }
 
 function validate(body: RequestBody): ValidationResult {

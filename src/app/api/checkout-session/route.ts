@@ -102,7 +102,11 @@ export async function POST(request: Request) {
       origin: new URL(request.url).origin,
       eligibleForTrial,
     });
-    return NextResponse.json({ success: true, url });
+    // eligibleForTrial is safe to return: it's a boolean already computed
+    // server-side for this exact session, carries no payment/customer
+    // detail, and is what src/lib/analytics/events.ts's CheckoutCreated
+    // event uses for its "trial eligible / $0 today" diagnostic context.
+    return NextResponse.json({ success: true, url, eligibleForTrial });
   } catch (err) {
     console.error(
       "Failed to create Stripe subscription checkout session:",

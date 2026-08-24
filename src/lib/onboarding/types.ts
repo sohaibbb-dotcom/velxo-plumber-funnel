@@ -67,6 +67,21 @@ export type OnboardingSubmissionRow = {
   // see src/lib/onboarding/provisioning.ts.
   setup_completed_at: string | null;
   provisioning_triggered_at: string | null;
+  // ── Attribution (conversion-funnel instrumentation) ────────────────────
+  // Mirrors the columns already on preview_requests. Populated at insert
+  // time from the client's stored first-touch attribution (src/lib/
+  // attribution.ts) — needed because a Phase 1 submission (the AI
+  // Receptionist path) can exist with no preview_request_id at all.
+  meta_ad_id: string | null;
+  meta_adset_id: string | null;
+  meta_campaign_id: string | null;
+  meta_creative_id: string | null;
+  fbclid: string | null;
+  utm_source: string | null;
+  utm_medium: string | null;
+  utm_campaign: string | null;
+  utm_content: string | null;
+  utm_term: string | null;
   created_at: string;
   updated_at: string;
 };

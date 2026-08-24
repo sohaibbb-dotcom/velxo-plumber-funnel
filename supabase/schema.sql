@@ -779,3 +779,71 @@ create index if not exists onboarding_submissions_trial_started_idx
 alter table public.onboarding_submissions
   add column if not exists setup_completed_at timestamptz,
   add column if not exists provisioning_triggered_at timestamptz;
+
+-- ============================================================================
+-- Migration: conversion-funnel instrumentation
+--
+-- Two additions, both purely additive/diagnostic — neither is read by any
+-- business-critical path (Stripe, HighLevel, provisioning). Source of truth
+-- for anything business-critical remains onboarding_submissions and Stripe
+-- itself, unchanged.
+--
+-- onboarding_submissions attribution columns: mirrors the columns already on
+-- preview_requests (meta_ad_id, meta_adset_id, meta_campaign_id,
+-- meta_creative_id, fbclid, utm_*). Needed because a Phase 1 submission (the
+-- AI Receptionist path) can exist with no preview_request_id at all — the
+-- homepage, not /preview, is that path's landing page. Populated at insert
+-- time by /api/onboarding-submissions from the client's stored first-touch
+-- attribution (src/lib/attribution.ts, now captured globally via
+-- src/components/analytics/AttributionCapture.tsx).
+--
+-- funnel_events: one row per client- or server-observed diagnostic event —
+-- PrimaryCTAClick, OnboardingView, OnboardingStart, OnboardingComplete,
+-- CheckoutCreated (all client-fired, via /api/track) and TrialStarted
+-- (server-fired only, from the Stripe webhook's own authoritative state in
+-- src/lib/subscriptionFulfillment.ts). Deliberately one generic table rather
+-- than one per event — these are breadcrumbs for diagnosing where visitors
+-- drop off, not a new source of truth.
+--
+-- This file is NOT run automatically — apply manually via the Supabase SQL
+-- editor, same as the rest of this file.
+-- ============================================================================
+alter table public.onboarding_submissions
+  add column if not exists meta_ad_id text,
+  add column if not exists meta_adset_id text,
+  add column if not exists meta_campaign_id text,
+  add column if not exists meta_creative_id text,
+  add column if not exists fbclid text,
+  add column if not exists utm_source text,
+  add column if not exists utm_medium text,
+  add column if not exists utm_campaign text,
+  add column if not exists utm_content text,
+  add column if not exists utm_term text;
+
+create table if not exists public.funnel_events (
+  id                        uuid primary key default gen_random_uuid(),
+  event_name                text not null,
+  occurred_at               timestamptz not null default now(),
+  -- Anonymous, per-browser, same-origin localStorage id (src/lib/analytics/
+  -- events.ts) — correlates one visitor's own events, not a cross-site
+  -- identifier and not attribution itself.
+  visitor_id                text,
+  plan                      text,
+  -- Which CTA instance (e.g. "hero", "pricing-ai_receptionist",
+  -- "navbar-mobile") — only meaningful for PrimaryCTAClick.
+  location                  text,
+  pathname                  text,
+  preview_public_id         text,
+  onboarding_submission_id  uuid references public.onboarding_submissions(id),
+  attribution               jsonb not null default '{}'::jsonb,
+  metadata                  jsonb not null default '{}'::jsonb
+);
+
+create index if not exists funnel_events_event_name_idx
+  on public.funnel_events (event_name, occurred_at);
+create index if not exists funnel_events_visitor_id_idx
+  on public.funnel_events (visitor_id) where visitor_id is not null;
+create index if not exists funnel_events_onboarding_submission_id_idx
+  on public.funnel_events (onboarding_submission_id) where onboarding_submission_id is not null;
+
+alter table public.funnel_events enable row level security;

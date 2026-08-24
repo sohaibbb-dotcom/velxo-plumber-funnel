@@ -5,6 +5,7 @@ import { ArrowRight } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { TRIAL_CTA_HREF } from "@/lib/routes";
 import { HeroProductDemo } from "@/components/sections/HeroProductDemo";
+import { trackFunnelEvent } from "@/lib/analytics/events";
 
 const EASE = [0.16, 1, 0.3, 1] as const;
 
@@ -81,6 +82,13 @@ export function Hero() {
             >
               <a
                 href={TRIAL_CTA_HREF}
+                onClick={() =>
+                  trackFunnelEvent("PrimaryCTAClick", {
+                    plan: "ai_receptionist",
+                    location: "hero",
+                    destination: TRIAL_CTA_HREF,
+                  })
+                }
                 className="group inline-flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-violet-600 to-blue-600 px-7 py-3.5 text-[15px] font-semibold text-white shadow-lg shadow-violet-950/40 transition-all duration-200 hover:from-violet-500 hover:to-blue-500 hover:shadow-violet-500/25 sm:w-auto sm:px-8 sm:py-4 sm:text-base"
               >
                 Start My 30-Day Free Trial

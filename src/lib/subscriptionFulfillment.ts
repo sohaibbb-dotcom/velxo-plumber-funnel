@@ -95,6 +95,24 @@ export async function processSubscriptionStarted(session: Stripe.Checkout.Sessio
     throw new Error(`Could not persist subscription state for submission ${submission.id}`);
   }
 
+  // Step 5.5: best-effort first-party diagnostic record — the ONLY place
+  // "TrialStarted" is ever recorded, deliberately fired from this
+  // webhook-confirmed state and nowhere else (never from checkout-session
+  // creation, never from a browser event reaching /onboarding/success). Not
+  // sent to Meta — this app has no server-side Conversions API integration,
+  // and adding one is out of scope here. Must never throw: the authoritative
+  // write above already succeeded, and a failure here must not cause Stripe
+  // to redeliver and redo the HighLevel calls below.
+  const { error: trialStartedEventError } = await supabaseServer.from("funnel_events").insert({
+    event_name: "TrialStarted",
+    plan: submission.plan,
+    onboarding_submission_id: submission.id,
+    metadata: { stripe_subscription_id: subscription.id },
+  });
+  if (trialStartedEventError) {
+    console.error(`Failed to record TrialStarted funnel_event for submission ${submission.id} (non-fatal):`, trialStartedEventError.message);
+  }
+
   // Step 6: only now touch HighLevel — the authoritative subscription state
   // is already durably stored. Deliberately never reads
   // session.customer_details; name/email/phone come only from the vetted

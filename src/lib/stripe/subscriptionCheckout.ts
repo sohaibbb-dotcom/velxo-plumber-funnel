@@ -19,6 +19,33 @@ const STRIPE_COMPLETE_PRICE_ID = process.env.STRIPE_COMPLETE_PRICE_ID;
 
 const TRIAL_PERIOD_DAYS = 30;
 
+/**
+ * Best-effort acquisition context for the resulting Subscription/Session
+ * objects — diagnostic only, read straight off the already-trusted
+ * onboarding_submissions row (never re-accepted from the browser at this
+ * point). Stripe metadata values must be strings, so undefined/null fields
+ * are simply omitted rather than sent as "null" text.
+ */
+function buildAttributionMetadata(submission: OnboardingSubmissionRow): Record<string, string> {
+  const fields: Record<string, string | null> = {
+    meta_ad_id: submission.meta_ad_id,
+    meta_adset_id: submission.meta_adset_id,
+    meta_campaign_id: submission.meta_campaign_id,
+    meta_creative_id: submission.meta_creative_id,
+    fbclid: submission.fbclid,
+    utm_source: submission.utm_source,
+    utm_medium: submission.utm_medium,
+    utm_campaign: submission.utm_campaign,
+    utm_content: submission.utm_content,
+    utm_term: submission.utm_term,
+  };
+  const out: Record<string, string> = {};
+  for (const [key, value] of Object.entries(fields)) {
+    if (value) out[key] = value;
+  }
+  return out;
+}
+
 function resolvePriceId(plan: Plan): string {
   const priceId = plan === "ai_receptionist" ? STRIPE_AI_RECEPTIONIST_PRICE_ID : STRIPE_COMPLETE_PRICE_ID;
   if (!priceId) {
@@ -55,6 +82,7 @@ export async function createSubscriptionCheckoutSession({
   const stripe = new Stripe(STRIPE_SECRET_KEY);
   const priceId = resolvePriceId(submission.plan);
   const monthlyPrice = PLAN_MONTHLY_PRICE_AUD[submission.plan];
+  const attributionMetadata = buildAttributionMetadata(submission);
 
   // Stripe Checkout's fixed subscription-mode template always headlines the
   // recurring price (that IS what's being subscribed to) — there is no API
@@ -70,7 +98,7 @@ export async function createSubscriptionCheckoutSession({
     line_items: [{ price: priceId, quantity: 1 }],
     subscription_data: {
       ...(eligibleForTrial ? { trial_period_days: TRIAL_PERIOD_DAYS } : {}),
-      metadata: { onboarding_submission_id: submission.id, plan: submission.plan },
+      metadata: { onboarding_submission_id: submission.id, plan: submission.plan, ...attributionMetadata },
     },
     ...(eligibleForTrial
       ? {
@@ -86,7 +114,7 @@ export async function createSubscriptionCheckoutSession({
     // never trust name/email typed into Stripe's own checkout form.
     client_reference_id: submission.public_id,
     customer_email: submission.business_email,
-    metadata: { onboarding_submission_id: submission.id, plan: submission.plan },
+    metadata: { onboarding_submission_id: submission.id, plan: submission.plan, ...attributionMetadata },
     success_url: `${origin}/onboarding/success?session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${origin}/onboarding/cancelled`,
   });
