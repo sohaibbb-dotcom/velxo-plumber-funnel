@@ -16,7 +16,10 @@ import { sanitizeAttributionToJson } from "@/lib/attributionSanitize";
 const ALLOWED_EVENTS = new Set([
   "PrimaryCTAClick",
   "OnboardingView",
-  "OnboardingStart",
+  "CalculatorStart",
+  "CalculatorComplete",
+  "ResultViewed",
+  "DetailsStart",
   "OnboardingComplete",
   "CheckoutCreated",
 ]);

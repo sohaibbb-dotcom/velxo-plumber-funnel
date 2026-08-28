@@ -8,11 +8,22 @@ import { getStoredAttribution } from "@/lib/attribution";
  * first-party via /api/track. TrialStarted is intentionally absent here: it
  * fires server-side only, from the Stripe webhook's own authoritative state
  * (src/lib/subscriptionFulfillment.ts), never from a browser event.
+ *
+ * OnboardingStart was retired with the missed-call-calculator onboarding
+ * redesign: the old single "did they touch anything" signal no longer maps
+ * to one screen. It's replaced by two more precise events — CalculatorStart
+ * (first interaction with the calculator, now the true entry-engagement
+ * signal) and DetailsStart (first interaction with the business-details
+ * form, further down the flow) — so drop-off can be localized to a specific
+ * step instead of a single ambiguous "onboarding" blob.
  */
 export type FunnelEventName =
   | "PrimaryCTAClick"
   | "OnboardingView"
-  | "OnboardingStart"
+  | "CalculatorStart"
+  | "CalculatorComplete"
+  | "ResultViewed"
+  | "DetailsStart"
   | "OnboardingComplete"
   | "CheckoutCreated";
 
